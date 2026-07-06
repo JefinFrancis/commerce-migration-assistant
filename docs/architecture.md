@@ -130,6 +130,45 @@ The CCM is a JSON document per client workspace (`ccm.json`), validated by a JSO
 Schema in `ccm/schema/`. Because v1 is schema-only, the CCM carries *structure*,
 not records.
 
+### Design basis — why the model is shaped this way
+
+The CCM is **anchored on the target (commercetools), not on the sources.** Its job
+is to be *losslessly emittable* to commercetools, so it is shaped around what CT's
+resource model can hold. If the CCM could express something CT cannot represent,
+the emitter would silently drop it — the target defines the shape. On top of that
+anchor the model adds exactly two things:
+
+- **A thin layer of source-neutral commerce concepts** — every platform has a
+  catalog/product structure, a taxonomy, pricing scope, customer segmentation, an
+  org structure, and fulfillment geography. That common denominator is what lets
+  many sources converge into one model. Source-specific shapes are normalized
+  (e.g. ATG's product/SKU split → the CCM's `level: product | variant`).
+- **Migration metadata** commercetools itself has no concept of — `sourceRef`,
+  `confidence`, `decisionsNeeded[]`.
+
+In one line: *the CCM is the commercetools model, abstracted just enough that any
+source maps in, plus migration metadata.*
+
+### Value for a single-platform migration
+
+The hub is not only for multi-platform combinations. The common engagement is a
+single source (e.g. ATG only) → commercetools, and the CCM earns its place there
+for reasons unrelated to multi-source reuse:
+
+- **Decouples analysis from emission** — uncertain, AI-driven "understand the
+  source" work produces a reviewable artifact; deterministic "generate Terraform"
+  work consumes it. The CCM is the clean seam.
+- **Human-review checkpoint** — a consultant corrects `ccm.json` before any code
+  is generated, rather than hand-editing generated HCL.
+- **Resumability** — re-emit Terraform without re-running analysis.
+- **Reuse across engagements on the same platform** — the ATG analyzer and the
+  emitter are shared by every ATG client; the CCM is the contract between them.
+
+Trade-off: for a genuinely one-off, throwaway migration the hub is extra
+indirection. The payoff scales with number of platforms, number of clients, and
+how much review/auditability matters — all of which apply to a reusable
+consultancy framework, so the hub is the right call even for single-source work.
+
 ### Entities and their commercetools targets
 
 | CCM entity | commercetools target | Terraform resource (`labd/commercetools`) |
@@ -250,6 +289,31 @@ resource family:
 The output is a `terraform/` module in the client workspace. `terraform plan` /
 `terraform apply` stands up the commercetools project schema, and re-runs are
 reproducible and diff-able.
+
+### Versioning & commercetools updates
+
+commercetools and the `labd/commercetools` provider each evolve on their own
+release cadence. Since migrations must be reproducible, the framework **pins** a
+tested version per engagement rather than chasing "latest":
+
+- **Pin, don't chase.** The target commercetools API/provider version is recorded
+  in the workspace manifest and in the emitter's `required_providers` block; bumps
+  are deliberate and tested, not automatic.
+- **Isolate CT churn in the emitter.** This is the hub-and-spoke benefit applied to
+  *time*: the CCM stays a slow-moving, source-neutral abstraction, and anything CT
+  renames or restructures is absorbed by the one CT-version-specific component.
+  (The CCM says `businessUnits[]`; the emitter picks `business_unit_company` vs
+  `business_unit_division` per the pinned provider.)
+- **Keep the CCM slightly more abstract than raw CT drafts**, so a CT change does
+  not ripple back into every source analyzer.
+- **Support matrix + conformance check.** Document supported CT/provider versions;
+  in CI, run `terraform validate` / `plan` on emitted output and periodically
+  re-verify the CT resource list so drift is caught, not discovered mid-project.
+
+Because we chose Terraform, the binding contract is the **provider schema**, which
+tracks the CT API on its own cadence — that is the artifact we pin and test
+against. (The resource list in this document was verified against the then-current
+`labd/commercetools` provider in July 2026.)
 
 ---
 
