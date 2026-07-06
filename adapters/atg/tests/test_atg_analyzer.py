@@ -61,7 +61,7 @@ class ExtractTests(unittest.TestCase):
 
 class ToCcmTests(unittest.TestCase):
     def setUp(self):
-        self.ccm, _ = analyze(FIXTURE, client="Test Telco", domain="telecom")
+        self.ccm, _, _ = analyze(FIXTURE, client="Test Telco", domain="telecom")
         self.pts = {pt["key"]: pt for pt in self.ccm["productTypes"]}
 
     def test_product_and_sku_merge_into_one_product_type(self):
@@ -118,7 +118,7 @@ class SchemaConformanceTests(unittest.TestCase):
             import jsonschema
         except ImportError:
             self.skipTest("jsonschema not installed")
-        ccm, _ = analyze(FIXTURE, client="Test Telco", domain="telecom")
+        ccm, _, _ = analyze(FIXTURE, client="Test Telco", domain="telecom")
         with open(SCHEMA, encoding="utf-8") as fh:
             schema = json.load(fh)
         jsonschema.validate(ccm, schema, cls=jsonschema.Draft202012Validator)

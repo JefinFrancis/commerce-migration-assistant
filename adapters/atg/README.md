@@ -10,13 +10,27 @@ to translate an Oracle ATG / Oracle Commerce source into the
 ## Implemented
 
 ```
-extract.py    parse ATG repository-definition XML -> raw inventory (no model)
-mappings.py   ATG data-type -> CCM attribute-type rules; descriptor classification
-to_ccm.py     assemble CCM fragments with provenance
-analyze.py    CLI: python3 adapters/atg/analyze.py <repository.xml> [--client N --domain D --out F]
-fixtures/     synthetic productCatalog.xml for development/testing
-tests/        unit tests incl. CCM-schema conformance
+extract.py     parse ATG repository-definition XML -> raw inventory (no model)
+db_extract.py  parse ATG GSA schema DDL -> raw inventory (tables, columns, FKs)
+mappings.py    ATG data-type / SQL-type -> CCM attribute-type rules; classification
+to_ccm.py      assemble CCM fragments with provenance; reconcile against the DB
+analyze.py     CLI (see below)
+fixtures/      synthetic productCatalog.xml + productCatalog_schema.sql
+tests/         unit tests incl. reconciliation + CCM-schema conformance
 ```
+
+CLI:
+
+```
+# codebase only
+python3 adapters/atg/analyze.py <repository.xml> --client N --domain D [--out F]
+# codebase + database reconciliation
+python3 adapters/atg/analyze.py <repository.xml> --db <schema.sql> [--out F]
+```
+
+Reconciliation (when `--db` is supplied): corrects `required` from `NOT NULL`,
+boosts confidence on confirmed columns, and surfaces **DB-only columns** (present in
+the schema but absent from the XML) as attributes carrying a decision.
 
 Run the tests from the repo root:
 

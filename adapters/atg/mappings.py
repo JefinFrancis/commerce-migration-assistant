@@ -108,6 +108,24 @@ def confidence_for(ccm_type, extra):
     return 0.8  # reference / set
 
 
+# SQL column type -> CCM attribute type (base word, params stripped).
+SQL_TYPE_PREFIX_MAP = [
+    (("varchar", "char", "nvarchar", "nchar", "text", "clob", "longvarchar", "string"), "text"),
+    (("int", "integer", "bigint", "smallint", "tinyint", "numeric", "decimal",
+      "number", "float", "double", "real", "money"), "number"),
+    (("timestamp", "datetime", "date", "time"), "datetime"),
+    (("bit", "boolean", "bool"), "boolean"),
+]
+
+
+def sql_to_ccm_type(sql_type):
+    base = re.split(r"[\s(]", (sql_type or "").strip().lower(), 1)[0]
+    for prefixes, ccm_type in SQL_TYPE_PREFIX_MAP:
+        if base in prefixes:
+            return ccm_type
+    return "text"
+
+
 def classify_descriptor(name):
     """Return one of: 'product', 'sku', 'category', 'catalog', 'standard-other', 'custom'."""
     n = (name or "").lower()

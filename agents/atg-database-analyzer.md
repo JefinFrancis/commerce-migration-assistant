@@ -29,6 +29,25 @@ ambiguous cases.
   the repository XML.
 - Informs `required`, `constraint`, and single-vs-multi (`set`) attribute decisions.
 
+## Implementation
+
+Implemented in [`adapters/atg/`](../../adapters/atg/):
+
+```
+python3 adapters/atg/analyze.py <repository.xml> --db <schema.sql> [--out ccm.json]
+```
+
+- `db_extract.py` — parses CREATE/ALTER TABLE DDL into a raw inventory of tables,
+  columns (name, sqlType, nullable, primaryKey) and foreign keys (no model).
+- `to_ccm.py` — reconciliation, when a DB inventory is supplied:
+  - `required` is corrected from `NOT NULL`;
+  - confidence is boosted on columns confirmed by the DB;
+  - **DB-only columns** (present in the schema, absent from the XML, excluding
+    PK/FK/audit columns) are surfaced as attributes at the owning descriptor's level,
+    each carrying a `decisionsNeeded` entry.
+- `fixtures/productCatalog_schema.sql` + `tests/test_atg_db_analyzer.py` — sample
+  schema and reconciliation tests, incl. schema conformance.
+
 ## Output
 
 Partial CCM fragments (JSON) with `origin: source`, `sourceRef` pointing at the

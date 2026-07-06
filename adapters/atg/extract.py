@@ -58,19 +58,25 @@ def parse_repository(xml_path):
             continue
         properties = []
         seen = set()
+        tables = []
 
-        def _add(prop, multi_hint=False):
+        def _add(prop, table_name=None, multi_hint=False):
             parsed = _parse_property(prop, multi_hint)
+            parsed["table"] = table_name
             if parsed["name"] and parsed["name"] not in seen:
                 seen.add(parsed["name"])
                 properties.append(parsed)
 
         # Properties usually live under <table> elements; a "multi" table implies
-        # a multi-valued property.
+        # a multi-valued property. Track which table backs each property so the
+        # database analyzer can reconcile columns against it.
         for table in it.iter("table"):
+            table_name = table.get("name")
+            if table_name and table_name not in tables:
+                tables.append(table_name)
             multi = table.get("type", "") == "multi"
             for prop in table.findall("property"):
-                _add(prop, multi_hint=multi)
+                _add(prop, table_name=table_name, multi_hint=multi)
         # Also accept properties declared directly under the item-descriptor.
         for prop in it.findall("property"):
             _add(prop)
@@ -80,6 +86,7 @@ def parse_repository(xml_path):
                 "name": name,
                 "displayName": it.get("display-name"),
                 "superType": it.get("super-type"),
+                "tables": tables,
                 "properties": properties,
             }
         )
