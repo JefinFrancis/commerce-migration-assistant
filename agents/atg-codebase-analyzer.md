@@ -33,6 +33,24 @@ deduplicate structurally-identical descriptors (reason once, apply to many).
 - Custom item-descriptors with no CT equivalent → flag as a `decisionNeeded`
   (product type vs. custom Type vs. custom object).
 
+## Implementation
+
+The deterministic core is implemented in [`adapters/atg/`](../../adapters/atg/):
+
+```
+python3 adapters/atg/analyze.py <repository.xml> --client "<name>" --domain <domain> [--out ccm.json]
+```
+
+- `extract.py` — parses repository XML into a raw inventory (no model).
+- `mappings.py` — ATG data-type → CCM attribute-type rules; descriptor classification.
+- `to_ccm.py` — assembles CCM fragments (product+sku → one product type; custom
+  descriptors → a proposed product type carrying a `decisionsNeeded` entry).
+- `fixtures/productCatalog.xml` + `tests/` — sample input and unit tests
+  (`python3 -m unittest discover -s adapters/atg/tests`), including schema conformance.
+
+Model reasoning is layered on top only for the hard cases (see the scale strategy in
+the `analyze-atg` skill).
+
 ## Output
 
 Partial CCM fragments (JSON) validating against `ccm/schema/ccm.schema.json`, each

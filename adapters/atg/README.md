@@ -4,7 +4,25 @@ ATG-specific mapping knowledge used by the `analyze-atg` skill and its sub-analy
 to translate an Oracle ATG / Oracle Commerce source into the
 [Canonical Commerce Model](../../ccm/schema/ccm.schema.json).
 
-> **Status: scaffold.** This directory will hold the ATG → CCM mapping rules.
+> **Status: in progress.** The deterministic codebase analyzer is implemented; the
+> database/docs/website analyzers and model-reasoning layer are still to come.
+
+## Implemented
+
+```
+extract.py    parse ATG repository-definition XML -> raw inventory (no model)
+mappings.py   ATG data-type -> CCM attribute-type rules; descriptor classification
+to_ccm.py     assemble CCM fragments with provenance
+analyze.py    CLI: python3 adapters/atg/analyze.py <repository.xml> [--client N --domain D --out F]
+fixtures/     synthetic productCatalog.xml for development/testing
+tests/        unit tests incl. CCM-schema conformance
+```
+
+Run the tests from the repo root:
+
+```
+python3 -m unittest discover -s adapters/atg/tests
+```
 
 ## What lives here (planned)
 

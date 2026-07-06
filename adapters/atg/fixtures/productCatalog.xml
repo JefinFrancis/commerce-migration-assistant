@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic ATG repository-definition fixture for developing/testing the
+     codebase analyzer. Mirrors the shape of a real productCatalog.xml. -->
+<gsa-template>
+
+  <item-descriptor name="product" display-name="Product">
+    <table name="dcs_product" type="primary" id-column-name="product_id">
+      <property name="displayName" data-type="string" column-name="display_name" required="true"/>
+      <property name="longDescription" data-type="big string" column-name="long_desc"/>
+      <property name="brand" data-type="string" column-name="brand"/>
+      <property name="launchDate" data-type="timestamp" column-name="launch_date"/>
+      <property name="featured" data-type="boolean" column-name="featured"/>
+    </table>
+    <table name="dcs_product_kw" type="multi">
+      <property name="keywords" data-type="list" component-data-type="string" column-name="keyword"/>
+    </table>
+    <table name="dcs_product_rel" type="multi">
+      <property name="relatedProducts" data-type="array" component-item-type="product" column-name="related_id"/>
+    </table>
+    <table name="dcs_product_skus" type="multi">
+      <property name="childSKUs" data-type="list" component-item-type="sku" column-name="sku_id"/>
+    </table>
+  </item-descriptor>
+
+  <item-descriptor name="sku" display-name="SKU">
+    <table name="dcs_sku" type="primary" id-column-name="sku_id">
+      <property name="color" data-type="enumerated" column-name="color">
+        <option value="black" code="0"/>
+        <option value="white" code="1"/>
+        <option value="blue" code="2"/>
+      </property>
+      <property name="storageGb" data-type="int" column-name="storage_gb"/>
+      <property name="listPrice" data-type="double" column-name="list_price"/>
+      <property name="inStock" data-type="boolean" column-name="in_stock"/>
+    </table>
+  </item-descriptor>
+
+  <item-descriptor name="category" display-name="Category">
+    <table name="dcs_category" type="primary" id-column-name="category_id">
+      <property name="displayName" data-type="string" column-name="display_name"/>
+      <property name="childCategories" data-type="list" component-item-type="category" column-name="child_id"/>
+    </table>
+  </item-descriptor>
+
+  <!-- Custom, telecom-specific descriptor with no direct commercetools equivalent. -->
+  <item-descriptor name="warrantyPlan" display-name="Warranty Plan">
+    <table name="tel_warranty" type="primary" id-column-name="warranty_id">
+      <property name="termMonths" data-type="int" column-name="term_months"/>
+      <property name="coverage" data-type="string" column-name="coverage"/>
+    </table>
+  </item-descriptor>
+
+</gsa-template>
