@@ -14,6 +14,14 @@ Introspect the ATG **GSA (Generic SQL Adapter)** schema in `inputs/` (a DDL/sche
 dump, or a read-only connection if provided). The database is ground truth for what
 columns actually exist and their cardinality.
 
+## Parse first, reason selectively (architecture §10)
+
+**Do not read the schema with the model.** Extract it *deterministically* —
+parse the DDL or query `information_schema` for tables, columns, types, nullability,
+and foreign keys — into a raw inventory that scales to thousands of tables. Reserve
+model reasoning for reconciling the DB against the repository XML and for genuinely
+ambiguous cases.
+
 ## What it adds beyond the codebase analyzer
 
 - Confirms real columns, types, nullability, and multiplicity behind item-descriptors.

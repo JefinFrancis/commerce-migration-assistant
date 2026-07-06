@@ -37,6 +37,9 @@ project *schema*, not populated content.
 - **Domain packs are data/priors, not forked code.** Verticals (telecom,
   manufacturing, …) prime the analyzers and planner rather than branching the
   pipeline.
+- **Parse, don't read.** Structured sources (repository XML, DB schema) are
+  extracted *deterministically*; the model reasons about the hard cases, it does
+  not read every line. This is what keeps large sources tractable — see §10.
 
 ### Locked decisions (v1)
 
@@ -431,7 +434,76 @@ on a core — without changing how the pipeline works.
 
 ---
 
-## 10. Roadmap
+## 10. Scaling & Large Sources
+
+Large ATG installs (hundreds of item-descriptors, sprawling schemas) are handled by
+**width and rules**, not by a bigger context window. Two properties make the problem
+much smaller than it first appears, and five techniques handle the rest.
+
+### Schema-only bounds the mapping count
+
+v1 migrates *structure, not records*. The number of mappings is bounded by the count
+of **distinct** product types, attributes, categories, and custom types — **not** by
+how many products/orders/customers exist. A telco with 10M SKUs but 25 product types
+is 25 product-type mappings, not 10 million. The remaining concern is **schema
+sprawl** (a heavily-customized install), which is bounded and much smaller. (Bulk
+*data* migration is a separate future phase — batched/streamed, never through the
+model.)
+
+### Deterministic extraction first, model reasoning selectively
+
+The single biggest lever: **never feed the whole codebase to the model.** Repository
+XML and DB schemas are structured, so:
+
+1. **Extract deterministically (no model).** A real XML parser reads every
+   `item-descriptor`/`property`; DB introspection reads `information_schema`. This
+   produces a complete **raw inventory** of the source cheaply and reliably at any
+   size — it scales with a parser, not with tokens.
+2. **Rule-based mapping for the easy majority.** `adapters/<platform>/` rules map
+   `property type → attribute type` mechanically.
+3. **Model reasoning only for the hard cases** — custom item-descriptors with no CT
+   equivalent, ambiguities, conflicts, labels, and resolving `decisionsNeeded`.
+
+Context per reasoning step stays small regardless of repository size.
+
+### Horizontal fan-out (map-reduce)
+
+For the judgment work, the root analyzer enumerates the work-list from the raw
+inventory, shards it by natural boundary (per item-descriptor / module / catalog)
+across parallel worker sub-analyzers with bounded context, and merges their CCM
+fragments. Merging is mostly mechanical (by `key`); the model is invoked only on
+conflicts and decisions.
+
+### Pattern deduplication
+
+Schema sprawl is repetitive — many descriptors reuse the same shapes. Cluster
+structurally-identical descriptors, reason about the **pattern once**, apply to all,
+and escalate only the outliers. "500 mappings" becomes "12 patterns + a few
+exceptions."
+
+### Resumable & incremental
+
+The raw inventory is a durable work-list; the analyzer checkpoints completed items
+and writes CCM fragments as it goes. A large migration can run in passes and re-run
+only what changed — nothing must fit in one context or one session.
+
+### Compact emission & review at scale
+
+- **Emission:** the Terraform emitter uses `for_each` over data maps, so 400 product
+  types is one templated block iterating a map — not 400 hand-written resources — and
+  `terraform plan` stays fast.
+- **Review:** the report surfaces the risky minority — sorts by confidence, lists
+  `decisionsNeeded` first, groups by pattern, and supports bulk approval of repeated
+  patterns. Humans review exceptions, not thousands of identical rows.
+- **Coverage, never silent truncation:** the report states what was and wasn't mapped
+  (e.g. "312 of 340 item-descriptors mapped; 28 deferred as unused/low-priority"),
+  prioritizing customer-facing entities (signalled by the website analyzer).
+- **Model tiering:** cheap parser + a fast model for routine classification; escalate
+  to the strong model only for genuinely hard cases.
+
+---
+
+## 11. Roadmap
 
 1. Scaffold the plugin — `.claude-plugin/plugin.json` + `marketplace.json`, CCM JSON
    Schema, and stub `SKILL.md` / agent files.

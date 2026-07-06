@@ -7,7 +7,7 @@ user-invocable: true
 # analyze-atg — Phase 1: analyze the ATG source
 
 > **Status: scaffold.** Structure and contract defined; implementation pending.
-> See [`docs/architecture.md`](../../docs/architecture.md) (§3, §5) and
+> See [`docs/architecture.md`](../../docs/architecture.md) (§3, §5, §10 Scaling) and
 > [`ccm/schema/ccm.schema.json`](../../ccm/schema/ccm.schema.json).
 
 ## Purpose
@@ -37,15 +37,31 @@ product/SKU → product/variant levels) live in [`adapters/atg/`](../../adapters
 - Domain priors from the active pack (e.g. [`domains/telecom/`](../../domains/telecom/))
   are merged with `origin: domain-pack`.
 
+## Scale strategy (deterministic parse first — see architecture §10)
+
+Large ATG installs are handled by width and rules, not a bigger context window:
+
+1. **Extract deterministically** — parse repository XML / DB schema into a complete
+   **raw inventory** with no model involved. This is the work-list.
+2. **Rule-based mapping for the easy majority** via `adapters/atg/`.
+3. **Model reasoning only for the hard cases** (custom descriptors, ambiguities,
+   conflicts, labels, decisions).
+4. **Fan out** the judgment work across sub-analyzers with bounded context; **dedup
+   repeated patterns** (reason once, apply to many); **checkpoint** so the run is
+   resumable and incremental.
+
 ## Steps (to implement)
 
 1. Read `manifest.json`; determine which inputs are present.
-2. Launch the matching sub-analyzers (in parallel) against `inputs/`.
-3. Merge their partial CCM fragments; resolve conflicts by confidence + provenance;
+2. **Deterministically extract** a raw inventory from each available input
+   (sub-analyzers do structured parsing first, model reasoning only where needed).
+3. Launch/coordinate the sub-analyzers (in parallel, sharded for large sources)
+   against `inputs/`.
+4. Merge their partial CCM fragments; resolve conflicts by confidence + provenance;
    record ambiguities as `decisionsNeeded[]`.
-4. Apply the domain pack priors.
-5. Validate against the CCM schema and write `ccm.json`.
-6. Suggest `/migration-report --phase analysis` to review.
+5. Apply the domain pack priors.
+6. Validate against the CCM schema and write `ccm.json`.
+7. Suggest `/migration-report --phase analysis` to review.
 
 ## Related
 

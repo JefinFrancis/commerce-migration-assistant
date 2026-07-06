@@ -83,7 +83,7 @@ review mappings, edit the model, and add custom CT-side attributes.
 
 ## Status
 
-The architecture is defined; implementation follows the [roadmap](docs/architecture.md#10-roadmap).
+The architecture is defined; implementation follows the [roadmap](docs/architecture.md#11-roadmap).
 Current first slice: **ATG → commercetools**, **telecom** domain, **B2B + B2C**.
 
 ## License

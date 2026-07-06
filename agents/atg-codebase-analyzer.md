@@ -10,9 +10,17 @@ tools: Read, Grep, Glob, Bash
 
 ## Role
 
-Read the ATG **repository-definition XML** in `inputs/` and derive the intended
-shape of the catalog. In ATG, `<item-descriptor>` = a type and `<property>` = a
-field/column.
+Derive the intended shape of the catalog from the ATG **repository-definition XML**
+in `inputs/`. In ATG, `<item-descriptor>` = a type and `<property>` = a field/column.
+
+## Parse first, reason selectively (architecture §10)
+
+**Do not read the XML with the model.** Parse it *deterministically* (a real XML
+parser) into a complete raw inventory of item-descriptors and properties — this
+scales to any repo size. Apply `adapters/atg/` rules for the mechanical majority of
+mappings. Invoke model reasoning only for the hard cases (custom item-descriptors,
+ambiguous types, conflicts). For large sources, shard by item-descriptor/module and
+deduplicate structurally-identical descriptors (reason once, apply to many).
 
 ## Mapping (see `adapters/atg/`)
 
