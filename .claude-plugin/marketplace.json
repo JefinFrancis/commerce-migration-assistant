@@ -1,0 +1,15 @@
+{
+  "name": "commerce-migration-assistant",
+  "owner": {
+    "name": "Object Edge",
+    "email": "jefin.francis@objectedge.com"
+  },
+  "plugins": [
+    {
+      "name": "commerce-migration-assistant",
+      "source": "./",
+      "description": "Migrate any commerce platform to commercetools via a Canonical Commerce Model and Terraform emission.",
+      "category": "migration"
+    }
+  ]
+}

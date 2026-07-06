@@ -1,0 +1,284 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/JefinFrancis/commerce-migration-assistant/ccm/schema/ccm.schema.json",
+  "title": "Canonical Commerce Model",
+  "description": "Platform-neutral, target-anchored model of a commerce project's schema (structure only, no records). Source analyzers write it; the planner and Terraform emitter read it.",
+  "type": "object",
+  "required": ["meta", "productTypes", "categories"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": { "$ref": "#/$defs/meta" },
+    "productTypes": { "type": "array", "items": { "$ref": "#/$defs/productType" } },
+    "categories": { "type": "array", "items": { "$ref": "#/$defs/category" } },
+    "customFieldTypes": { "type": "array", "items": { "$ref": "#/$defs/customFieldType" } },
+    "customerGroups": { "type": "array", "items": { "$ref": "#/$defs/namedEntity" } },
+    "taxCategories": { "type": "array", "items": { "$ref": "#/$defs/taxCategory" } },
+    "zones": { "type": "array", "items": { "$ref": "#/$defs/zone" } },
+    "shippingMethods": { "type": "array", "items": { "$ref": "#/$defs/namedEntity" } },
+    "channels": { "type": "array", "items": { "$ref": "#/$defs/namedEntity" } },
+    "stores": { "type": "array", "items": { "$ref": "#/$defs/store" } },
+    "productSelections": { "type": "array", "items": { "$ref": "#/$defs/namedEntity" } },
+    "businessUnits": { "type": "array", "items": { "$ref": "#/$defs/businessUnit" } },
+    "associateRoles": { "type": "array", "items": { "$ref": "#/$defs/namedEntity" } },
+    "attributeGroups": { "type": "array", "items": { "$ref": "#/$defs/namedEntity" } },
+    "states": { "type": "array", "items": { "$ref": "#/$defs/state" } },
+    "customObjects": { "type": "array", "items": { "$ref": "#/$defs/customObject" } },
+    "pricingModel": { "$ref": "#/$defs/pricingModel" }
+  },
+  "$defs": {
+    "meta": {
+      "type": "object",
+      "description": "Engagement + provenance context for the whole model.",
+      "required": ["client", "sourcePlatform", "schemaVersion"],
+      "properties": {
+        "client": { "type": "string" },
+        "domain": { "type": "string", "description": "Domain pack, e.g. 'telecom'." },
+        "sourcePlatform": { "type": "string", "description": "e.g. 'atg', 'occ', 'shopify'." },
+        "audience": { "type": "string", "enum": ["b2c", "b2b", "b2b+b2c"] },
+        "schemaVersion": { "type": "string", "description": "CCM schema version this document targets." },
+        "ctApiVersion": { "type": "string", "description": "Pinned commercetools API version target." },
+        "providerVersion": { "type": "string", "description": "Pinned labd/commercetools Terraform provider version." },
+        "generatedBy": { "type": "string" },
+        "generatedAt": { "type": "string" }
+      }
+    },
+    "localizedString": {
+      "description": "A localized label: either a plain string or a map of locale -> string.",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string" } }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Shared metadata carried by every CCM element.",
+      "required": ["origin"],
+      "properties": {
+        "origin": {
+          "type": "string",
+          "enum": ["source", "domain-pack", "manual"],
+          "description": "Where this element came from. 'manual' = hand-added CT-side element with no source counterpart."
+        },
+        "sourceRef": {
+          "type": "string",
+          "description": "The DB table / doc page / code file it derived from (for origin=source)."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Analyzer confidence; 1.0 for human-asserted (manual / domain-pack) elements."
+        },
+        "decisionsNeeded": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/decision" }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "description": "An ambiguity flagged for human review rather than resolved silently.",
+      "required": ["id", "question"],
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "recommendation": { "type": "string" },
+        "resolved": { "type": "boolean", "default": false },
+        "resolution": { "type": "string" }
+      }
+    },
+    "namedEntity": {
+      "type": "object",
+      "description": "Base for simple keyed entities (customer groups, channels, roles, ...).",
+      "required": ["key", "origin"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedString" },
+        "description": { "$ref": "#/$defs/localizedString" }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "attribute": {
+      "type": "object",
+      "description": "A product-type attribute definition.",
+      "required": ["name", "type", "level", "origin"],
+      "properties": {
+        "name": { "type": "string" },
+        "label": { "$ref": "#/$defs/localizedString" },
+        "type": {
+          "type": "string",
+          "enum": ["text", "ltext", "enum", "lenum", "number", "boolean", "money", "date", "datetime", "time", "reference", "set", "nested"]
+        },
+        "required": { "type": "boolean", "default": false },
+        "constraint": { "type": "string", "enum": ["none", "unique", "combinationUnique"], "default": "none" },
+        "level": { "type": "string", "enum": ["product", "variant"] },
+        "values": {
+          "type": "array",
+          "description": "Value set for enum / lenum types.",
+          "items": {
+            "type": "object",
+            "required": ["key"],
+            "properties": {
+              "key": { "type": "string" },
+              "label": { "$ref": "#/$defs/localizedString" }
+            }
+          }
+        },
+        "elementType": {
+          "description": "For type=set: the element attribute type.",
+          "type": "string"
+        },
+        "referenceTypeId": {
+          "description": "For type=reference: the referenced resource type id.",
+          "type": "string"
+        }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "productType": {
+      "type": "object",
+      "required": ["key", "name", "origin"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedString" },
+        "description": { "$ref": "#/$defs/localizedString" },
+        "attributes": { "type": "array", "items": { "$ref": "#/$defs/attribute" } }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "category": {
+      "type": "object",
+      "required": ["key", "name", "origin"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedString" },
+        "slug": { "$ref": "#/$defs/localizedString" },
+        "parent": { "type": ["string", "null"], "description": "Parent category key, or null for a root." },
+        "orderHint": { "type": "string" }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "customFieldType": {
+      "type": "object",
+      "description": "A commercetools Type (custom fields) attached to one or more resources.",
+      "required": ["key", "resourceTypeIds", "origin"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedString" },
+        "resourceTypeIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "e.g. 'customer', 'order', 'category', 'line-item'."
+        },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/attribute" } }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "taxCategory": {
+      "type": "object",
+      "required": ["key", "origin"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedString" },
+        "rates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "country"],
+            "properties": {
+              "name": { "type": "string" },
+              "country": { "type": "string" },
+              "amount": { "type": "number" },
+              "includedInPrice": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "zone": {
+      "type": "object",
+      "required": ["key", "origin"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedString" },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "country": { "type": "string" },
+              "state": { "type": "string" }
+            }
+          }
+        }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "store": {
+      "type": "object",
+      "required": ["key", "origin"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedString" },
+        "languages": { "type": "array", "items": { "type": "string" } },
+        "distributionChannels": { "type": "array", "items": { "type": "string" } },
+        "supplyChannels": { "type": "array", "items": { "type": "string" } }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "businessUnit": {
+      "type": "object",
+      "description": "B2B org node -> commercetools_business_unit_company / _division.",
+      "required": ["key", "unitType", "origin"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedString" },
+        "unitType": { "type": "string", "enum": ["company", "division"] },
+        "parentUnit": { "type": ["string", "null"] },
+        "associateRoles": { "type": "array", "items": { "type": "string" } }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "state": {
+      "type": "object",
+      "required": ["key", "type", "origin"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedString" },
+        "type": {
+          "type": "string",
+          "description": "commercetools state type, e.g. 'OrderState', 'LineItemState', 'ProductState'."
+        },
+        "transitions": { "type": "array", "items": { "type": "string" } }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "customObject": {
+      "type": "object",
+      "description": "Fallback container for source concepts with no direct CT resource.",
+      "required": ["container", "key", "origin"],
+      "properties": {
+        "container": { "type": "string" },
+        "key": { "type": "string" },
+        "valueSchema": { "type": "object" }
+      },
+      "allOf": [ { "$ref": "#/$defs/provenance" } ]
+    },
+    "pricingModel": {
+      "type": "object",
+      "description": "How prices are scoped (structure only, no price values in v1).",
+      "properties": {
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["customerGroup", "channel", "store", "country", "currency"]
+          }
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

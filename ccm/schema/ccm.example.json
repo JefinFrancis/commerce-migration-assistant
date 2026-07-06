@@ -1,0 +1,160 @@
+{
+  "meta": {
+    "client": "Example Telco",
+    "domain": "telecom",
+    "sourcePlatform": "atg",
+    "audience": "b2b+b2c",
+    "schemaVersion": "0.1.0",
+    "ctApiVersion": "20250101",
+    "providerVersion": "~> 1.20",
+    "generatedBy": "analyze-atg"
+  },
+  "productTypes": [
+    {
+      "key": "device",
+      "name": { "en": "Device" },
+      "origin": "source",
+      "sourceRef": "productCatalog.xml#item-descriptor[name=product]",
+      "confidence": 0.86,
+      "attributes": [
+        {
+          "name": "color",
+          "label": { "en": "Color" },
+          "type": "lenum",
+          "level": "variant",
+          "origin": "source",
+          "sourceRef": "dcs_sku.color",
+          "confidence": 0.92,
+          "values": [
+            { "key": "black", "label": { "en": "Black" } },
+            { "key": "white", "label": { "en": "White" } }
+          ]
+        },
+        {
+          "name": "storage_gb",
+          "label": { "en": "Storage (GB)" },
+          "type": "number",
+          "level": "variant",
+          "origin": "source",
+          "sourceRef": "dcs_sku.storage",
+          "confidence": 0.9
+        },
+        {
+          "name": "contract_term_months",
+          "label": { "en": "Contract term (months)" },
+          "type": "enum",
+          "level": "variant",
+          "origin": "domain-pack",
+          "confidence": 1.0,
+          "values": [
+            { "key": "0", "label": { "en": "No contract" } },
+            { "key": "12", "label": { "en": "12 months" } },
+            { "key": "24", "label": { "en": "24 months" } }
+          ]
+        },
+        {
+          "name": "eco_rating",
+          "label": { "en": "Eco rating" },
+          "type": "text",
+          "level": "product",
+          "origin": "manual",
+          "confidence": 1.0,
+          "decisionsNeeded": []
+        }
+      ]
+    },
+    {
+      "key": "plan",
+      "name": { "en": "Rate Plan" },
+      "origin": "domain-pack",
+      "confidence": 1.0,
+      "attributes": [
+        {
+          "name": "data_allowance_gb",
+          "label": { "en": "Data allowance (GB)" },
+          "type": "number",
+          "level": "variant",
+          "origin": "domain-pack",
+          "confidence": 1.0
+        },
+        {
+          "name": "billing_cycle",
+          "label": { "en": "Billing cycle" },
+          "type": "enum",
+          "level": "variant",
+          "origin": "domain-pack",
+          "confidence": 1.0,
+          "values": [
+            { "key": "monthly", "label": { "en": "Monthly" } },
+            { "key": "annual", "label": { "en": "Annual" } }
+          ]
+        }
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "key": "phones",
+      "name": { "en": "Phones" },
+      "slug": { "en": "phones" },
+      "parent": null,
+      "origin": "source",
+      "sourceRef": "productCatalog.xml#category[id=cat_phones]",
+      "confidence": 0.88
+    },
+    {
+      "key": "smartphones",
+      "name": { "en": "Smartphones" },
+      "slug": { "en": "smartphones" },
+      "parent": "phones",
+      "origin": "source",
+      "sourceRef": "productCatalog.xml#category[id=cat_smartphones]",
+      "confidence": 0.84
+    }
+  ],
+  "customerGroups": [
+    {
+      "key": "consumer",
+      "name": { "en": "Consumer" },
+      "origin": "source",
+      "sourceRef": "userProfiles.xml#profile.priceList",
+      "confidence": 0.7
+    },
+    {
+      "key": "enterprise",
+      "name": { "en": "Enterprise" },
+      "origin": "source",
+      "sourceRef": "userProfiles.xml#organization",
+      "confidence": 0.75
+    }
+  ],
+  "businessUnits": [
+    {
+      "key": "acme-corp",
+      "name": { "en": "Acme Corp" },
+      "unitType": "company",
+      "parentUnit": null,
+      "associateRoles": ["buyer", "admin"],
+      "origin": "source",
+      "sourceRef": "b2bOrg.xml#organization[id=acme]",
+      "confidence": 0.6,
+      "decisionsNeeded": [
+        {
+          "id": "D-07",
+          "question": "ATG cost centers under Acme: map to divisions or to custom fields?",
+          "options": ["business_unit_division", "customFieldType on business unit"],
+          "recommendation": "business_unit_division",
+          "resolved": false
+        }
+      ]
+    }
+  ],
+  "associateRoles": [
+    { "key": "buyer", "name": { "en": "Buyer" }, "origin": "domain-pack", "confidence": 1.0 },
+    { "key": "admin", "name": { "en": "Administrator" }, "origin": "domain-pack", "confidence": 1.0 }
+  ],
+  "pricingModel": {
+    "scopes": ["customerGroup", "channel"],
+    "notes": "ATG price lists mapped to customer-group-scoped prices; structure only, no values in v1."
+  }
+}
