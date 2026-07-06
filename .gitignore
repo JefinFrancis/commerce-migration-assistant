@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Per-client migration workspaces (data, not framework)
+/workspaces/
+
+# Local tooling
+.DS_Store
