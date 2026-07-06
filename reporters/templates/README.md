@@ -3,16 +3,31 @@
 The shared HTML/CSS template used by the `migration-report` skill to render
 read-only review reports.
 
-> **Status: scaffold.** This directory will hold the report template(s).
+> **Status: implemented.** `report.css` is the stylesheet inlined by the renderer at
+> [`reporters/render.py`](../render.py).
 
-## What lives here (planned)
+## Implemented
 
-- A **single self-contained HTML template** (inline CSS + minimal vanilla JS — no
-  framework, no build step, opens offline) with two modes:
-  - **analysis** — source → CCM: confidence bars, provenance (`sourceRef`), origin
-    badges (source / domain-pack / manual), and a "Decisions needed" panel.
-  - **plan** — CCM → commercetools + Terraform resource: manual/custom additions
-    badged, plus a "what `terraform apply` will create" summary.
+- `report.css` — the stylesheet (light + dark aware) inlined into every generated
+  report. Editing it changes the look of all future reports.
+- The renderer lives at [`reporters/render.py`](../render.py):
+
+```
+python3 reporters/render.py <ccm.json> --phase analysis --out mapping-report.html
+python3 reporters/render.py <ccm.json> --phase plan     --out plan-report.html
+```
+
+Both modes emit a **single self-contained HTML file** (inline CSS + a little vanilla
+JS — no framework, no build step, opens offline):
+
+- **analysis** — source → CCM per product type: confidence bars, provenance
+  (`sourceRef`), origin badges (source / domain-pack / manual), a "Decisions needed"
+  panel surfaced first, and a filter box + "Decisions only" toggle.
+- **plan** — CCM → commercetools + Terraform resource, manual/custom additions
+  badged, plus a "what `terraform apply` will create" summary.
+
+Tests: `python3 -m unittest discover -s reporters/tests` (content, self-containment,
+and well-formedness).
 
 ## Design rules
 

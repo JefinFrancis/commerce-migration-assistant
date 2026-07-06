@@ -42,9 +42,27 @@ little vanilla JS — no framework, no build step, opens offline).
 - **plan:** CCM → commercetools resource + Terraform resource, manual/custom
   additions badged, and a "what `terraform apply` will create" summary (counts).
 
-## Steps (to implement)
+## Implementation
+
+Implemented in [`reporters/render.py`](../../reporters/render.py), styled by
+[`reporters/templates/report.css`](../../reporters/templates/report.css):
+
+```
+python3 reporters/render.py <ccm.json> --phase analysis --out reports/mapping-report.html
+python3 reporters/render.py <ccm.json> --phase plan     --out reports/plan-report.html
+```
+
+Produces a single self-contained HTML file (inline CSS + vanilla JS; opens offline).
+Analysis mode renders per-product-type attribute tables with confidence bars, origin
+badges, provenance, and a "Decisions needed" panel (+ filter / decisions-only
+toggle). Plan mode renders the CCM → commercetools → Terraform mapping and a
+"what will be created" summary.
+
+Tests: `python3 -m unittest discover -s reporters/tests`.
+
+## Steps
 
 1. Parse `--phase`.
 2. Load the relevant JSON artifact from the workspace.
-3. Render it against the shared template in `reporters/templates/`.
+3. Render via `reporters/render.py`.
 4. Write the HTML into `reports/` and point the user to it.
