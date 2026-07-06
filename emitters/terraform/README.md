@@ -5,21 +5,49 @@ Templates and module structure used by the `emit-terraform` skill to render the
 for the [`labd/commercetools`](https://registry.terraform.io/providers/labd/commercetools/latest/docs)
 provider.
 
-> **Status: scaffold.** This directory will hold the CCM → HCL templates.
+> **Status: in progress.** `emit.py` renders product types, categories, and
+> customer groups; the remaining resource families are still to come.
 
-## What lives here (planned)
+## Implemented (`emit.py`)
 
-HCL templates, one per resource family, plus the pinned provider block:
+```
+python3 emitters/terraform/emit.py <ccm.json> --out-dir <terraform/>
+```
 
-- `versions.tf.tmpl` — `required_providers { commercetools = { version = ... } }`.
-- `product-types.tf.tmpl` — `commercetools_product_type` (+ `commercetools_attribute_group`).
-- `taxonomy.tf.tmpl` — `commercetools_category`.
-- `custom-types.tf.tmpl` — `commercetools_type`, `commercetools_custom_object`.
-- `org.tf.tmpl` — `commercetools_business_unit_company` / `_division`,
-  `commercetools_associate_role`, `commercetools_product_selection`.
-- `fulfillment.tf.tmpl` — `commercetools_tax_category` (+ `_rate`),
-  `commercetools_shipping_zone` (+ `_rate`), `commercetools_shipping_method`.
-- `project-settings.tf.tmpl` — `commercetools_project_settings`.
+Emits, for each resource family present in the CCM:
+
+- `versions.tf` — pinned `required_providers { commercetools = { ... } }`
+  (version from `meta.providerVersion`, default `~> 1.20`).
+- `product-types.tf` — `commercetools_product_type`, explicit generated blocks
+  (attributes with type/label/required/constraint; enum values; set element types;
+  reference targets).
+- `categories.tf` — `commercetools_category` via `for_each` over a data map, with
+  parent resolved by self-reference.
+- `customer-groups.tf` — `commercetools_customer_group` via `for_each`.
+
+Tests (`tests/test_emit.py`) assert content and validate HCL syntax with
+python-hcl2; run from the repo root:
+
+```
+python3 -m unittest discover -s emitters/terraform/tests
+```
+
+### `for_each` vs. explicit blocks (architecture §10)
+
+Homogeneous resources (categories, customer groups, …) are emitted as a single
+`for_each` block over a data map — so 400 categories stay one block and
+`terraform plan` stays fast. Product types have a *heterogeneous* nested attribute
+schema (enum values, set element types), so they are emitted as explicit generated
+blocks; authoring cost is still zero because they are generated from the CCM.
+
+## Still to come
+
+- `commercetools_type` / `custom_object`, `commercetools_attribute_group`.
+- Org / B2B: `business_unit_company` / `_division`, `associate_role`, `product_selection`.
+- Fulfillment: `tax_category` (+ `_rate`), `shipping_zone` (+ `_rate`), `shipping_method`.
+- `project_settings`.
+
+## Design rule
 
 ## Design rule
 

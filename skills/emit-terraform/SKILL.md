@@ -32,10 +32,27 @@ HCL modules grouped by resource family:
 - `fulfillment.tf` — tax categories, zones, shipping methods.
 - `project-settings.tf` — project-level configuration.
 
-## Steps (to implement)
+## Implementation
 
-1. Load `ccm.json` + `mappings/ccm-to-ct.json`.
-2. Render each resource family from templates in `emitters/terraform/`.
+The emitter is implemented in [`emitters/terraform/emit.py`](../../emitters/terraform/):
+
+```
+python3 emitters/terraform/emit.py <ccm.json> --out-dir terraform/
+```
+
+Currently renders `versions.tf` (pinned provider), `product-types.tf` (explicit
+generated blocks), and `categories.tf` / `customer-groups.tf` (via `for_each`).
+Homogeneous families use `for_each`; product types use explicit blocks (see the
+emitter README). Remaining families (custom types, org/B2B, fulfillment,
+project-settings) are still to come.
+
+Tests: `python3 -m unittest discover -s emitters/terraform/tests` (content +
+HCL-syntax validation).
+
+## Steps (to implement / extend)
+
+1. Load `ccm.json` (+ `mappings/ccm-to-ct.json` once the planner produces it).
+2. Render each resource family via `emit.py`.
 3. Write the pinned `versions.tf`.
 4. Tell the user to run `terraform init && terraform plan` in `terraform/`.
 
