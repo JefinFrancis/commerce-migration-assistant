@@ -92,11 +92,21 @@ Phase 1  /analyze-atg           Root skill; fans out to sub-analyzers by input:
                                 confidence + decisionsNeeded. Root reconciles →
                                 one merged ccm.json.
 
+         └─ /migration-report --phase analysis
+                                Renders mapping-report.html (source → CCM) — a
+                                read-only visual of every mapping, confidence,
+                                provenance, and open decision.
+
 Phase 2  /plan-migration-to-ct  Reads ccm.json → commercetools target design
                                 (product types, categories, types, groups,
                                 tax/zones/shipping, channels/stores, business
                                 units, associate roles, product selections) +
                                 mapping tables + decision report.
+
+         └─ /migration-report --phase plan
+                                Renders plan-report.html (CCM → commercetools +
+                                Terraform resource), with manual/custom additions
+                                badged and a "what will be created" summary.
 
 Phase 3  /emit-terraform        Renders the plan into .tf (HCL) modules — the
                                 "directly importable" artifact (`terraform apply`).
@@ -121,6 +131,28 @@ Between every phase, `ccm.json` and the mapping tables are hand-editable. Becaus
 later phases are pure functions of these files, a human can correct the model and
 re-run downstream phases deterministically — the pipeline is resumable and
 diff-able.
+
+### Review reports (read-only HTML views)
+
+Consultants and clients need to *see* the mappings, not read raw JSON. The
+`/migration-report` skill renders a **self-contained static HTML file** (inline
+CSS + a little vanilla JS — no framework, no build step) that opens with a
+double-click, works offline, and is committable and shareable.
+
+Two rules keep this simple and correct:
+
+- **The report is a pure view, never a source of truth.** It is rendered *from*
+  `ccm.json` and the mapping tables. All edits happen to those artifacts (by hand
+  or by asking Claude); the report is then regenerated.
+- **Regenerate on demand, not live-sync (v1).** Re-running `/migration-report` is
+  instant, so it already feels live — no running server or file-watcher. (A future
+  upgrade can make the HTML interactive and export an `overrides.json` the user
+  drops back into the workspace; that is purely additive to this design.)
+
+`/migration-report --phase analysis` shows **source → CCM** with confidence bars,
+provenance links, and a "Decisions needed" panel. `--phase plan` shows
+**CCM → commercetools + Terraform resource**, badges manual/custom additions, and
+summarizes what `terraform apply` will create.
 
 ---
 
@@ -191,12 +223,33 @@ consultancy framework, so the hub is the right call even for single-source work.
 
 ### Metadata on every element
 
-Every CCM element carries a metadata triplet that makes the framework trustworthy:
+Every CCM element carries metadata that makes the framework trustworthy:
 
-- **`sourceRef`** — the DB table / doc page / code file it derived from.
-- **`confidence`** — a 0–1 score from the analyzer.
+- **`origin`** — `source` | `domain-pack` | `manual` (see below).
+- **`sourceRef`** — the DB table / doc page / code file it derived from (for
+  `source` origin).
+- **`confidence`** — a 0–1 score from the analyzer (`1.0` for human-asserted
+  elements).
 - **`decisionsNeeded[]`** — flagged ambiguities routed to human review rather than
   resolved silently.
+
+### Manual & custom additions (CT-side attributes)
+
+Not everything commercetools needs exists in the source. A consultant must be able
+to introduce attributes, product types, or custom-field Types on the CT side that
+have no source counterpart — and the model supports this as a first-class case via
+the `origin` field:
+
+- **`source`** — derived from the client's platform; has a real `sourceRef`.
+- **`domain-pack`** — injected by a vertical pack (e.g. telecom rate-plan
+  attributes).
+- **`manual`** — hand-added on the CT side; `confidence: 1.0`, emitted to Terraform
+  exactly like any other element.
+
+Adding a custom attribute is just adding a CCM element with `origin: manual` (by
+editing `ccm.json` or asking Claude). Because origin is tracked, the review report
+**badges** what came from the source vs. the domain pack vs. hand-added — honest
+provenance a consultant can defend to a client.
 
 ### Product-type attribute definitions
 
@@ -210,7 +263,7 @@ Every CCM element carries a metadata triplet that makes the framework trustworth
 | `constraint` | `none` / `unique` / `combinationUnique` |
 | `level` | `product` or `variant` |
 | `values` | enum value set (for `enum`/`lenum`) |
-| *(+ metadata triplet)* | `sourceRef`, `confidence`, `decisionsNeeded[]` |
+| *(+ metadata)* | `origin`, `sourceRef`, `confidence`, `decisionsNeeded[]` |
 
 ---
 
@@ -317,32 +370,76 @@ against. (The resource list in this document was verified against the then-curre
 
 ---
 
-## 9. Repository Layout & Per-Client Workspace
+## 9. Packaging, Distribution & Layout
+
+The framework is distributed as a **single Claude Code plugin** so other developers
+install the whole pipeline in one step. The repository *is* the plugin, which fixes
+the layout: `skills/` and `agents/` live at the repo root (not under `.claude/`),
+and `.claude-plugin/plugin.json` is the manifest.
 
 ```
-.claude/skills/       migrate-init, analyze-atg, plan-migration-to-ct, emit-terraform
-.claude/agents/       atg-{codebase,database,docs,website}-analyzer
-ccm/schema/           JSON Schema for the Canonical Commerce Model
-adapters/atg/         ATG item-descriptor → CCM knowledge
-emitters/terraform/   CCM → HCL templates + module structure
-domains/telecom/      expected entities, product-type priors, decision heuristics
-docs/architecture.md  the design record (this document)
-workspaces/<client>/  inputs/ · ccm.json · mappings/ · terraform/ · decisions.md
+commerce-migration-assistant/          # the plugin repo
+├── .claude-plugin/
+│   ├── plugin.json                     # manifest: name, version (semver), description
+│   └── marketplace.json                # lets devs `/plugin marketplace add <repo>`
+├── skills/
+│   ├── migrate-init/SKILL.md
+│   ├── analyze-atg/SKILL.md
+│   ├── plan-migration-to-ct/SKILL.md
+│   ├── emit-terraform/SKILL.md
+│   └── migration-report/SKILL.md       # read-only HTML views (--phase analysis|plan)
+├── agents/
+│   └── atg-{codebase,database,docs,website}-analyzer.md
+├── ccm/schema/                         # JSON Schema for the Canonical Commerce Model
+├── adapters/atg/                       # ATG item-descriptor → CCM knowledge
+├── emitters/terraform/                 # CCM → HCL templates + module structure
+├── reporters/templates/                # HTML/CSS for the migration-report skill
+├── domains/telecom/                    # expected entities, product-type priors
+├── docs/                               # architecture, usage, extending
+└── README.md
 ```
 
-- The **framework** is a Claude Code skills/plugin repo the team installs.
-- Each **client migration** is a workspace (a subdirectory or a separate repo)
-  holding that client's inputs and generated artifacts.
+Supporting directories (`ccm/`, `adapters/`, `emitters/`, `reporters/`, `domains/`)
+ride along as bundled assets that skills read from the plugin root.
+
+### Installing the plugin
+
+```
+/plugin marketplace add JefinFrancis/commerce-migration-assistant
+/plugin install commerce-migration-assistant@<marketplace-name>
+```
+
+### Versioning
+
+The plugin version (semver in `plugin.json`) is the release unit and ties directly
+to the **commercetools support matrix** (§8): a plugin release pins a tested
+commercetools API / `labd/commercetools` provider version. Bumping the supported CT
+version is a plugin release, not a silent change.
+
+### Per-client workspace
+
+A **client migration is a workspace** — a separate directory or repo, not part of
+the plugin — holding that client's `inputs/ · ccm.json · mappings/ · reports/ ·
+terraform/ · decisions.md`. The plugin is the reusable tool; the workspace is the
+per-engagement data.
+
+### Growth path
+
+v1 is one plugin. As source platforms are added, per-platform adapters can split
+into their own plugins in the same marketplace (`cma-atg`, `cma-occ`, …) depending
+on a core — without changing how the pipeline works.
 
 ---
 
 ## 10. Roadmap
 
-1. Scaffold the repo structure + CCM JSON Schema + stub `SKILL.md` files.
+1. Scaffold the plugin — `.claude-plugin/plugin.json` + `marketplace.json`, CCM JSON
+   Schema, and stub `SKILL.md` / agent files.
 2. Build the `analyze-atg` root skill + its four sub-analyzers.
 3. Build `plan-migration-to-ct` + the Terraform emitter.
-4. Wire in the telecom domain pack.
-5. Add a second source platform (OCC or Shopify) to validate hub-and-spoke reuse.
+4. Build the `migration-report` skill + shared HTML template.
+5. Wire in the telecom domain pack.
+6. Add a second source platform (OCC or Shopify) to validate hub-and-spoke reuse.
 
 ---
 
