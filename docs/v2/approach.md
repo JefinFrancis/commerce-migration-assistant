@@ -29,7 +29,9 @@ Confirmed directions from the calls:
   scraped UI.
 - Keep **human-in-the-loop** review via HTML reports **plus natural-language
   prompting** for iterative adjustments and edge cases.
-- Investigate an **agent/workflow framework** ("AI Harness") for orchestration.
+- Investigate the **Agent Harnesses standard** ("AI Harness", agentharnesses.io) — a
+  portable, vendor-neutral packaging format for agent roles (a *packaging* concern,
+  distinct from workflow orchestration; see §5.5).
 
 ---
 
@@ -146,20 +148,50 @@ The steer from the call: **do not randomly generate or scrape the real UI.** Ins
   whether V2 consumes it or builds fresh.
 - Position scraping as **fallback/demo**, never the authoritative data source.
 
-### 5.5 Orchestration — "AI Harness" evaluation
+### 5.5 Packaging & orchestration — the "AI Harness" clarified
 
-- **We already run on an agent harness: Claude Code** (skills + subagents + the
-  Workflow tool). V1's plugin distribution model depends on this.
-- **Harness.io "AI / Worker Agents"** is CI/CD-pipeline-oriented — likely **not** the
-  fit for an interactive migration tool.
+The "AI Harness" Jags mentioned is the **Agent Harnesses standard**
+(https://agentharnesses.io, https://github.com/agentharnesses/agentharnesses) —
+**not** Harness.io's CI/CD product. These are two separate concerns and should be
+decided separately:
+
+**(A) Packaging & portability — Agent Harnesses standard.**
+
+- An open, vendor-neutral format (Apache-2.0) for packaging an agent's **role** =
+  context + capabilities. A harness is a directory:
+  ```
+  my-harness/
+  ├── HARNESS.md          # required: YAML frontmatter (name, description) + routing body
+  ├── .leaf-detectors     # patterns marking leaves, e.g. skill=SKILL.md
+  └── tools/ data/ …/     # author-named dirs, each with an uppercase routing file (TOOLS.md)
+  ```
+- **Progressive disclosure** loading: Load (`HARNESS.md` at start) → Discovery (read
+  routing files when a task arrives) → Activation (load only the relevant skill/dir)
+  → Execution (run bundled scripts). This keeps context lean — the same concern as
+  §10 scaling.
+- It **builds on the Agent Skills standard** — the same `SKILL.md` unit our V1
+  plugin already uses. Ships a Python reference CLI (`ahar init/validate/prompt`).
+- **Key point:** this is about *packaging and context loading*, **not** workflow/DAG
+  orchestration. It does not, by itself, "manage workflows"; it standardizes how an
+  agent role is defined and distributed.
+- **Relevance to us:** our repo is *already* skills + asset dirs. Expressing it as a
+  valid Agent Harness (add a `HARNESS.md`, routing files, and a `.leaf-detectors`
+  mapping `skill=SKILL.md`) would make the framework **portable across any
+  harness-compatible runtime — not just Claude Code** — directly serving the
+  "other devs can use this" goal. Low effort because the structure already aligns.
+  Recommendation: **dual-target** — keep the Claude Code plugin *and* expose an
+  Agent Harness view of the same tree.
+
+**(B) Workflow orchestration — a separate question.**
+
+- We already run interactively on **Claude Code** (skills + subagents + the Workflow
+  tool), which also gives us the NL-review loop "for free."
 - If we ever need explicit, deterministic, long-running **graph orchestration**, the
-  real contenders are **LangGraph** or the **Microsoft Agent Framework** — but
-  adopting one **diverges from the Claude Code plugin model** and adds a heavier
-  runtime. NL review "for free" is a strength of staying Claude-native.
-- **Lean:** keep the *interactive* workflow Claude-native; run *batch* jobs
-  (data migration) as plain, testable Python jobs — which need scheduling/retry, not
-  necessarily an agent framework. Treat "adopt a framework" as a deliberate,
-  evidence-based decision, not a default. (Jefin action item to evaluate.)
+  contenders are **LangGraph** or the **Microsoft Agent Framework** — heavier
+  runtimes that diverge from the Claude-native model.
+- **Lean:** keep the *interactive* migration flow Claude-native; run *batch* jobs
+  (data migration) as plain, testable Python jobs with scheduling/retry — which do
+  not need an agent framework. Adopt a graph framework only on clear evidence.
 
 ### 5.6 Human review + natural-language prompting
 
@@ -195,13 +227,16 @@ The steer from the call: **do not randomly generate or scrape the real UI.** Ins
    "self-hosted".
 4. **Data source of truth** — source DB export vs scraping as primary? (Recommend
    export-primary, scraping-fallback.)
-5. **Orchestration** — stay Claude-native vs adopt LangGraph / MS Agent Framework?
-   (Recommend Claude-native for interactive; plain jobs for batch.)
-6. **Default stacks** — confirm Next.js (frontend) / Node.js (backend); define the
+5. **Workflow orchestration** — stay Claude-native vs adopt LangGraph / MS Agent
+   Framework? (Recommend Claude-native for interactive; plain Python jobs for batch.)
+6. **Packaging format** — adopt the **Agent Harnesses standard** as a dual-target
+   (Claude Code plugin *and* portable harness) for vendor-neutral distribution?
+   (Recommend yes — low effort, our structure already aligns.)
+7. **Default stacks** — confirm Next.js (frontend) / Node.js (backend); define the
    override mechanism.
-7. **Design system** — build fresh, or adopt/extend an existing component library +
+8. **Design system** — build fresh, or adopt/extend an existing component library +
    Storybook?
-8. **Relationship to V1** — is V2 a new major version of the same plugin, or a
+9. **Relationship to V1** — is V2 a new major version of the same plugin, or a
    separate set of plugins in the same marketplace (e.g. `cma-data`, `cma-storefront`,
    `cma-cms`)?
 
@@ -243,5 +278,9 @@ The steer from the call: **do not randomly generate or scrape the real UI.** Ins
 - commercetools — categorization best practices:
   https://docs.commercetools.com/learning-model-your-product-catalog/categorization/best-practices-and-advanced-category-management
 - commercetools — API limits: https://docs.commercetools.com/api/limits
-- AI agent frameworks overview: https://www.langchain.com/resources/ai-agent-frameworks
-- Harness.io Worker Agents (CI/CD-oriented): https://www.harness.io/products/harness-ai/agents
+- Agent Harnesses standard (the "AI Harness" meant): https://agentharnesses.io/home
+- Agent Harnesses standard — repo + spec + CLI: https://github.com/agentharnesses/agentharnesses
+- AI agent frameworks overview (for workflow orchestration, separate concern):
+  https://www.langchain.com/resources/ai-agent-frameworks
+- Harness.io Worker Agents (CI/CD — NOT the tool meant, noted to avoid confusion):
+  https://www.harness.io/products/harness-ai/agents
