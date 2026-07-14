@@ -136,6 +136,46 @@ The steer from the call: **do not randomly generate or scrape the real UI.** Ins
 - **Scraping is only for throwaway demos/mocks** to showcase quickly — a separate,
   lower-fidelity track from the real accelerator.
 
+#### Design system: Object Edge — "The Missing Layer"
+
+The foundation is the **Object Edge brand design system**, exported from Claude
+Design (namespace `ObjectEdgeDesignSystem_cf2683`). It is already packaged as an
+**Agent Skill** (`object-edge-design`), so it drops straight into our
+skills/harness model.
+
+**What it gives us (the foundation):**
+
+- A production-grade **token layer** (`colors_and_type.css`): grounds
+  (paper `#F4EFE6` / ink `#0A0B0D` / teal `#0E3B3C`), amber accent `#C97A2A`,
+  light + dark foreground/rule tokens, **Inter Tight + JetBrains Mono**, a full type
+  scale, tracking, line-heights, spacing rhythm, radii, and weights, plus semantic
+  type classes (`.oe-display`, `.oe-body`, `.oe-eyebrow`, …).
+- A clear **aesthetic doctrine**: warm paper ground, ink for emphasis, teal
+  interludes, amber sparingly, those two typefaces only, no gradients/emoji.
+- UI kits (Hive OE console desktop/mobile, objectedge.com marketing) and slide
+  templates — useful as references for the visual language.
+
+**Honest gap (what we still build):** it is a **brand / marketing / deck / console**
+system, **not a commerce component library**. It has no product card, PLP grid,
+PDP, cart, mini-cart, checkout, facets, or mega-nav. Its type scale is also
+*deck-scaled* (display 168px, body 34px @ 1920×1080). So V2.0 still **builds the
+commerce components on top**, in this exact visual language, using a **web-scaled**
+type ramp derived from the same ratios (the Hive OE app kit shows the realistic UI
+scale, e.g. 14px body).
+
+**How it plugs in:**
+
+1. Map `colors_and_type.css` tokens → the Next.js storefront theme (`next/font` for
+   the two typefaces; CSS variables / Tailwind theme).
+2. Build the commerce components (product card, PLP, PDP, cart, nav) in **Storybook**
+   styled with these tokens and the Object Edge aesthetic.
+3. Vendor the DS into the harness as `skills/object-edge-design/`; the
+   `build-storefront` skill consumes it. Per client = re-theme the tokens, keep the
+   commerce components.
+
+Net: the DS is roughly the **foundation** (tokens, type, brand, aesthetic); the
+commerce component library is the V2.0 build on top of it.
+
 ### 5.3 CMS integration
 
 - **Decision: use Sanity's free tier for now.** Sanity Studio (the editing UI) is
