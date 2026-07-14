@@ -23,8 +23,9 @@ Confirmed directions from the calls:
 - Keep the phased, platform-agnostic, AI-driven approach and the canonical model
   (Jags: keep it **current** and **domain-adapted**, e.g. Telco).
 - Expand scope beyond the object model to **frontend + backend component migration**.
-- Add **data migration** (populate the new environment, incl. scraping live sites).
-- Add **CMS integration** for dynamic content (open-source, e.g. Sanity).
+- Add **demo-data seeding** (**not** full-catalog migration): seed a demo storefront
+  with a handful of **scraped** live products or **client-provided mock** products.
+- Add **CMS integration** for dynamic content — **Sanity (free tier)** for now.
 - Use a **common design system + Storybook** for UI — not random generation or
   scraped UI.
 - Keep **human-in-the-loop** review via HTML reports **plus natural-language
@@ -40,10 +41,10 @@ Confirmed directions from the calls:
 | Area | V1 (today) | V2 (proposed) |
 |---|---|---|
 | Output | CT project **schema** (Terraform) | Schema **+ data + storefront + backend + CMS** |
-| Data | none (schema only) | **Data migration** via CT Import API, incl. scraping |
+| Data | none (schema only) | **Demo seeding** — a small set of scraped/mock products (**not** full-catalog migration) |
 | Frontend | none | **Storefront** from a shared design system (Next.js default) |
 | Backend | none | **Backend/BFF** (Node.js default) + integration connectors |
-| Content | none | **CMS** (Sanity/OSS) for dynamic content |
+| Content | none | **CMS** — Sanity (free tier) for dynamic content |
 | Review | read-only HTML + edit JSON | HTML **+ natural-language prompting** loop |
 | Orchestration | Claude Code skills + Python | Evaluate explicit agent/workflow framework |
 | Scraping | none | Dual use: **data population** + **quick demo mocks** |
@@ -62,9 +63,10 @@ unchanged in spirit. V2 adds phases 4–6.
    ── review (HTML report + natural-language prompting) ──
 4. Frontend/Backend  storefront + backend from the shared design system,
                      Next.js / Node defaults with overrides
-5. Data Migration    populate commercetools (Import API), source export and/or
-                     scraped live data; throttled, resumable, idempotent
-6. CMS Integration   wire an OSS CMS (e.g. Sanity) for dynamic content
+5. Demo seeding      seed the demo app with a SMALL set of products — scraped from
+                     the client's live site OR supplied as client mock data
+                     (NOT full-catalog migration)
+6. CMS Integration   wire Sanity (free tier) for dynamic content
 ```
 
 Human review and NL prompting apply **between every phase**, as in V1.
@@ -81,13 +83,13 @@ is normalizing *structure*), and add **companion models** rather than bloating i
                          ┌── (V1) CT schema  -> Terraform emitter
    sources ─▶ analyzers ─┼── Content Model   -> CMS (Sanity) schema
         (spokes)   CCM ──┤── Storefront blueprint -> component/config generation
-                         └── data mappings   -> Import API data pipeline
+                         └── demo seed       -> a few products (scrape/mock) into the demo app
 ```
 
 - **CCM (schema)** — unchanged from V1; the stable center.
-- **Data pipeline** — reuses the CCM's *mappings* to transform source *records* into
-  commercetools import drafts. It does **not** need a separate canonical "data model";
-  it needs mapping + throughput.
+- **Demo seeder** — reuses the CCM's *mappings* to shape a *small* set of scraped or
+  mock products into commercetools/CMS drafts for the demo app. It is deliberately
+  **not** a full data-migration engine — no bulk throughput or canonical "data model".
 - **Content Model** — a companion model for CMS content types (some derived from the
   CCM, e.g. category/product content; some editorial-only).
 - **Storefront blueprint** — configuration that binds the shared design-system
@@ -100,19 +102,25 @@ schema'd artifacts (like `ccm.json`), or keep them as lighter config? (See §7.)
 
 ## 5. New subsystems
 
-### 5.1 Data migration  ⭐ highest effort / highest risk
+### 5.1 Demo seeding (NOT full data migration)  ✅ scope reduced
 
-- **Not Terraform.** Terraform is for schema/config, not bulk records. Use the
-  commercetools **Import API** (import containers/operations) and/or
-  **commercetools-sync**. Terraform stays for schema; data is a separate pipeline.
-- **Respect API limits.** commercetools enforces rate limits (HTTP 429) and request
-  quotas; bulk loads must be **batched, throttled with backoff, resumable, and
-  idempotent** (stable keys so re-runs converge). *Exact limits must be pulled from
-  the CT docs in a live environment — automated fetch is blocked here.*
-- **Source priority.** A **source DB export is authoritative**; scraping is a lossy
-  fallback. Prefer exports for real data; use scraping to fill gaps or for demos.
-- **Deterministic-first**, like the analyzers: transform records with mapping code,
+**Decision:** this framework does **not** migrate the client's full catalog/data.
+Its job is to **quickstart a demo storefront** populated with a *small* set of
+products, so the client sees a working, branded site fast.
+
+- **Two input modes:**
+  - **Scrape** a handful of real products from the client's existing live site
+    (for a "here's your store, rebuilt" showcase); or
+  - **Client mock products** — a small dataset the client hands over — ingested into
+    the generated application.
+- **Small volume by design** → the hard problems of bulk migration (Import API at
+  scale, rate limits / 429 backoff, multi-hour resumable jobs) are **out of scope**.
+  A simple, polite loader against the CT API (or seed files the app reads) is enough.
+- **Deterministic-first**, like the analyzers: shape records with mapping code,
   reserve the model for messy/ambiguous values.
+- **Explicitly out of scope (for now):** full production data migration. If a client
+  later needs it, that is a separate effort (Import API / commercetools-sync,
+  limits-aware) — documented as a future extension, not part of this framework.
 
 ### 5.2 Storefront / component accelerator
 
@@ -130,23 +138,27 @@ The steer from the call: **do not randomly generate or scrape the real UI.** Ins
 
 ### 5.3 CMS integration
 
-- Use an **open-source headless CMS** for dynamic content; the call named **Sanity**.
-- **Nuance to resolve:** Sanity's *Studio* is open-source (MIT), but its content
-  backend/datastore is a **hosted SaaS** — it is not fully self-hostable. If
-  "open-source" means *self-hosted*, alternatives are **Payload, Strapi, or
-  Directus**. Decision needed (see §7).
+- **Decision: use Sanity's free tier for now.** Sanity Studio (the editing UI) is
+  open-source (MIT); its backend is hosted SaaS, and the free tier is enough for
+  demos. Self-hosting / OSS-only alternatives (Payload, Strapi, Directus) are
+  **deferred** — revisit only if a client requires a fully self-hosted CMS.
 - Content types derive partly from the CCM (product/category content) plus editorial
   types; the frontend composes **commerce data (CT) + content (CMS)**.
+- Keep the CMS integration **behind a thin content interface** so the free-tier
+  Sanity choice can be swapped later without touching the storefront components.
 
 ### 5.4 Scraping (coordinate with Sivaram)
 
-- **Two distinct uses:** (a) supplementary **data** source for migration; (b) fast
-  **demo/mock** component generation for showcasing.
+- **Primary use now:** pull a **handful of real products** from the client's live
+  site to seed the demo storefront (§5.1). Small volume, showcase-oriented.
+- **Secondary use:** capture look-and-feel cues for quick mock/demo components.
 - **Tech:** JS-rendered sites need a headless browser — **Playwright is already
   available** in the Claude Code environment.
 - **Action item:** confirm the status of Sivaram's existing scraping component and
   whether V2 consumes it or builds fresh.
-- Position scraping as **fallback/demo**, never the authoritative data source.
+- Since we only need a **small sample** (not the whole catalog), scraping brittleness
+  is far less risky than in a full-migration scenario — keep it best-effort with mock
+  products as the always-available fallback.
 
 ### 5.5 Packaging & orchestration — the "AI Harness" clarified
 
@@ -209,62 +221,72 @@ decided separately:
 - Encode commercetools **product-modeling** and **categorization** best practices
   into the planner (e.g. categories-vs-attributes guidance, variant modeling) — pull
   the specifics from the CT learning docs in a live environment.
-- Feed **API limits** into the data-migration pipeline's batching/throttling.
+- **API limits** are a minor concern now that data is demo-seeding only (small
+  volume) — just be polite to the CT API; no bulk-throughput engineering needed.
 - Reaffirm the V1 trade-off: the canonical model adds complexity but gives a
   consistent, industry-structured model — especially valuable for clients on
   **multiple** source platforms.
 
 ---
 
-## 7. Key decisions & open questions
+## 7. Key decisions
 
-1. **Scope sequencing** — do all of 4/5/6 at once, or phase them? (Recommend phased —
-   see §8.)
-2. **Companion models** — formalize a schema'd "Content Model" and "Storefront
+### Decided
+
+- **Scope sequencing → phased rollout** (see §8).
+- **Data → demo seeding only** — a small set of scraped or client-mock products;
+  **no full-catalog migration** (§5.1).
+- **CMS → Sanity free tier** for now; self-hosted OSS alternatives deferred (§5.3).
+- **Packaging → dual-target** the Agent Harnesses standard *and* the Claude Code
+  plugin (§5.5, §11). Low effort — our structure already aligns.
+
+### Still open
+
+1. **Companion models** — formalize a schema'd "Content Model" and "Storefront
    blueprint", or keep them as lighter config?
-3. **CMS choice** — Sanity (OSS Studio + hosted backend) vs a fully self-hostable OSS
-   CMS (Payload / Strapi / Directus)? Depends on whether "open-source" means
-   "self-hosted".
-4. **Data source of truth** — source DB export vs scraping as primary? (Recommend
-   export-primary, scraping-fallback.)
-5. **Workflow orchestration** — stay Claude-native vs adopt LangGraph / MS Agent
-   Framework? (Recommend Claude-native for interactive; plain Python jobs for batch.)
-6. **Packaging format** — adopt the **Agent Harnesses standard** as a dual-target
-   (Claude Code plugin *and* portable harness) for vendor-neutral distribution?
-   (Recommend yes — low effort, our structure already aligns.)
-7. **Default stacks** — confirm Next.js (frontend) / Node.js (backend); define the
-   override mechanism.
-8. **Design system** — build fresh, or adopt/extend an existing component library +
+2. **Workflow orchestration** — stay Claude-native vs adopt LangGraph / MS Agent
+   Framework? (Recommend Claude-native; batch as plain Python jobs.)
+3. **Default stacks** — confirm Next.js / Node.js and define the override mechanism.
+4. **Design system** — build fresh, or adopt/extend an existing component library +
    Storybook?
-9. **Relationship to V1** — is V2 a new major version of the same plugin, or a
-   separate set of plugins in the same marketplace (e.g. `cma-data`, `cma-storefront`,
-   `cma-cms`)?
+5. **Relationship to V1** — one evolving plugin, or split into `cma-storefront`,
+   `cma-cms`, … in the same marketplace?
 
 ---
 
-## 8. Risks & recommended rollout
+## 8. Phased rollout & risks
 
-- **Scope explosion.** Six phases and ~five new subsystems is a lot. Recommend a
-  **phased V2**:
-  - **V2.0 — Data migration** (highest value on top of V1's schema; unlocks a
-    populated environment).
-  - **V2.1 — Storefront accelerator** (design system + Storybook + reference app).
-  - **V2.2 — CMS integration** (Sanity/OSS).
-  - Scraping and NL-review threaded through as they mature.
-- **Data correctness & volume** — the biggest new risk; needs limits-aware,
-  resumable, idempotent tooling and strong verification.
-- **Scraping reliability** — brittle across sites; keep it fallback/demo.
-- **Orchestration lock-in** — adopting an external framework could fight the plugin
-  distribution model; decide deliberately.
-- **CMS "OSS" ambiguity** — resolve self-hosted vs hosted before committing to Sanity.
+**Phased rollout** (the headline deliverable is an *instant, branded demo site*):
+
+- **V2.0 — Storefront accelerator.** The reusable asset: shared design system +
+  Storybook + reference Next.js/Node app wired to a V1-generated commercetools
+  project. Per-client = theme + configure.
+- **V2.1 — Demo quickstart.** Seed the themed app with a small set of products —
+  scraped from the client's live site or client-supplied mock data (§5.1). Depends
+  on V2.0 + scraping (Sivaram).
+- **V2.2 — CMS integration.** Wire Sanity (free tier) for dynamic content (§5.3).
+- Packaging (dual-target harness) and the NL-review loop are threaded through as the
+  above land, not separate phases.
+
+**Risks** (notably smaller after the data de-scope):
+
+- **Storefront accelerator is now the largest build** — a real design system +
+  reference app is significant work; treat V2.0 as the main investment.
+- **Scraping reliability** — brittle, but low-stakes here: we only need a small
+  sample, and client mock data is the always-available fallback.
+- **Orchestration lock-in** — don't adopt an external workflow framework without
+  clear need; it fights the Claude-native + harness distribution model.
+- **Scope creep back toward full data migration** — guard the boundary; keep this a
+  demo/quickstart tool, not a bulk-migration engine.
 
 ---
 
 ## 9. Action items (from the calls)
 
 - **Jefin** — check with **Sivaram** on the scraping component status.
-- **Jefin** — evaluate "AI Harness" applicability (see §5.5 — likely re-frame as
-  "do we need an external agent framework at all?").
+- **Jefin** — "AI Harness" identified as the **Agent Harnesses standard** (§5.5);
+  next step is to prototype the dual-target harness layout (§11) and run
+  `ahar validate`.
 - **Jefin** — request a second laptop to isolate dev environments.
 - **Jefin** — secure/document the meeting transcripts.
 - **Adriano** — consult Jacks/Kiran on additional resourcing (Cspire bandwidth).
@@ -284,3 +306,82 @@ decided separately:
   https://www.langchain.com/resources/ai-agent-frameworks
 - Harness.io Worker Agents (CI/CD — NOT the tool meant, noted to avoid confusion):
   https://www.harness.io/products/harness-ai/agents
+
+---
+
+## 11. Appendix — Dual-target Agent Harness layout (sketch)
+
+The framework can be **both** a Claude Code plugin **and** a valid Agent Harness from
+the *same* tree. This is **purely additive** — no existing V1 file moves or changes.
+The Claude Code runtime reads `.claude-plugin/` + `skills/` and ignores the harness
+files; a harness-compatible runtime reads `HARNESS.md` + routing files + leaf
+detectors and ignores the plugin manifest. Both share the same `skills/` and assets.
+
+```
+commerce-migration-assistant/
+├── HARNESS.md              # NEW  role entry: frontmatter + routing body
+├── .leaf-detectors         # NEW  e.g. `skill=SKILL.md` → each skills/* is a skill leaf
+├── .claude-plugin/         # kept  Claude Code plugin (plugin.json, marketplace.json)
+├── skills/                 # kept  Agent Skills — shared by BOTH targets
+│   ├── SKILLS.md           # NEW  routing file for the skills branch
+│   ├── migrate-init/SKILL.md
+│   ├── analyze-atg/SKILL.md
+│   ├── plan-migration-to-ct/SKILL.md
+│   ├── emit-terraform/SKILL.md
+│   ├── migration-report/SKILL.md
+│   └── (V2) build-storefront/ · seed-demo/ · integrate-cms/
+├── agents/                 # kept  + AGENTS.md   (NEW routing file)
+├── adapters/               # kept  + ADAPTERS.md (NEW)  — ATG→CCM knowledge (references)
+├── emitters/               # kept  + EMITTERS.md (NEW)
+├── reporters/              # kept  + REPORTERS.md (NEW)
+├── domains/                # kept  + DOMAINS.md  (NEW)
+├── ccm/                    # kept  + CCM.md      (NEW)  — the canonical schema
+└── docs/                   # kept  (architecture, usage, extending, v2/)
+```
+
+**`HARNESS.md`** (new, root):
+
+```markdown
+---
+name: Commerce Migration Assistant
+description: Migrate any commerce platform to commercetools — analyze a source into
+  a Canonical Commerce Model, plan the target, emit Terraform, and (V2) stand up a
+  themed demo storefront seeded with sample products.
+---
+
+Routing:
+- `skills/` — the migration capabilities (see SKILLS.md)
+- `ccm/` — the Canonical Commerce Model schema (see CCM.md)
+- `adapters/` — per-platform source→CCM knowledge (see ADAPTERS.md)
+- `emitters/` — CCM→Terraform templates (see EMITTERS.md)
+- `reporters/` — read-only HTML review reports (see REPORTERS.md)
+- `domains/` — vertical packs, e.g. telecom (see DOMAINS.md)
+```
+
+**`.leaf-detectors`** (new, root):
+
+```
+skill=SKILL.md
+```
+
+**`skills/SKILLS.md`** (new — routing so an agent loads only the skill it needs,
+progressive disclosure):
+
+```markdown
+- `migrate-init/` — capture project context
+- `analyze-atg/` — ATG source → ccm.json (fans out to the atg-* analyzers)
+- `plan-migration-to-ct/` — CCM → commercetools target design
+- `emit-terraform/` — CCM → Terraform (labd/commercetools)
+- `migration-report/` — render the read-only HTML review report
+```
+
+**Validation:** `pip install agentharnesses-cli && ahar validate .` (a CI check).
+
+**Why this is worth it:** it makes the whole framework runnable on *any*
+harness-compatible runtime — not only Claude Code — which is the vendor-neutral
+answer to "other devs / teams can pick this up and use it". It also formalizes the
+progressive-disclosure loading that keeps context lean as we add platforms, domains,
+and the V2 storefront/CMS skills (§10 scaling).
+
+> Not applied yet — this is the V2 target layout. Introducing it is a V2.0 task and
+> would be additive over the current (V1) tree.
