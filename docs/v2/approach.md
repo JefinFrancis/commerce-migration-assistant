@@ -90,13 +90,41 @@ is normalizing *structure*), and add **companion models** rather than bloating i
 - **Demo seeder** — reuses the CCM's *mappings* to shape a *small* set of scraped or
   mock products into commercetools/CMS drafts for the demo app. It is deliberately
   **not** a full data-migration engine — no bulk throughput or canonical "data model".
-- **Content Model** — a companion model for CMS content types (some derived from the
-  CCM, e.g. category/product content; some editorial-only).
-- **Storefront blueprint** — configuration that binds the shared design-system
-  components to this client's catalog/content (not bespoke code generation).
+**Companion models — what they are.** The CCM describes the *schema* (product types,
+categories, custom fields…). V2 produces two more things that the CCM does not
+describe: **content** (for the CMS) and a **storefront** (UI). A "companion model" is
+a small, focused model that sits *beside* the CCM to describe one of those concerns —
+derived partly from the CCM, but kept separate so the CCM stays a clean schema hub.
 
-Open question: do we formalize "Content Model" and "Storefront blueprint" as new
-schema'd artifacts (like `ccm.json`), or keep them as lighter config? (See §7.)
+- **Content Model** — the content types the CMS (Sanity) needs. Some mirror commerce
+  entities (a CCM category → a "category page" content type); some are purely
+  editorial (home hero, promo banner, blog post). It becomes the Sanity schema.
+  ```
+  contentTypes:
+    - key: categoryPage    # derived from CCM categories
+      fields: [heroImage, intro, seoTitle, seoDescription]
+    - key: homeHero        # editorial-only
+      fields: [headline, subhead, image, ctaLabel, ctaHref]
+  ```
+
+- **Storefront Blueprint** — a *configuration* (not code) that binds the shared
+  design-system components to this client's catalog/content + theme. It is the recipe
+  that turns the generic reference storefront into *this* client's storefront.
+  ```
+  theme: object-edge
+  pages:
+    home: [Hero(homeHero), FeaturedProducts(category=smartphones), PromoBanner]
+    plp:  { component: ProductGrid, facets: [color, storage_gb, brand] }
+    pdp:  { attributes: [color, storage_gb, contract_term_months], gallery: true }
+  nav: from CCM categories (top 2 levels)
+  ```
+
+**The open decision (see §7):** make these **formal schema'd artifacts** (like
+`ccm.json` — JSON Schema, validated, generated + reviewable in an HTML report), or
+keep them as **lighter config** (loose YAML/JSON, hand-authored, no formal schema)?
+Recommendation: **Content Model formal-ish** (Sanity needs a real schema and it maps
+cleanly from the CCM), **Storefront Blueprint light to start** (presentation glue
+that churns early; formalize once patterns stabilize) — start light, harden later.
 
 ---
 
@@ -231,19 +259,21 @@ decided separately:
   mapping `skill=SKILL.md`) would make the framework **portable across any
   harness-compatible runtime — not just Claude Code** — directly serving the
   "other devs can use this" goal. Low effort because the structure already aligns.
-  Recommendation: **dual-target** — keep the Claude Code plugin *and* expose an
-  Agent Harness view of the same tree.
+  Recommendation: **dual-target** every plugin — keep the Claude Code plugin form
+  *and* expose an Agent Harness view of the same tree. With the split-packaging
+  decision (§7), each per-capability plugin (`cma-core`, `cma-storefront`, …) is its
+  own dual-target unit in the shared marketplace.
 
-**(B) Workflow orchestration — a separate question.**
+**(B) Workflow orchestration — DECIDED: stay Claude-native.**
 
-- We already run interactively on **Claude Code** (skills + subagents + the Workflow
-  tool), which also gives us the NL-review loop "for free."
-- If we ever need explicit, deterministic, long-running **graph orchestration**, the
-  contenders are **LangGraph** or the **Microsoft Agent Framework** — heavier
-  runtimes that diverge from the Claude-native model.
-- **Lean:** keep the *interactive* migration flow Claude-native; run *batch* jobs
-  (data migration) as plain, testable Python jobs with scheduling/retry — which do
-  not need an agent framework. Adopt a graph framework only on clear evidence.
+- We run interactively on **Claude Code** (skills + subagents + the Workflow tool),
+  which also gives us the NL-review loop "for free." **This is the decision** — no
+  external agent framework.
+- External graph runtimes (**LangGraph**, **Microsoft Agent Framework**) are heavier
+  and diverge from the Claude-native + harness model; only revisit on clear evidence
+  of a need we can't meet natively.
+- Any *batch* work (e.g. demo seeding) runs as plain, testable Python jobs — not an
+  agent framework.
 
 ### 5.6 Human review + natural-language prompting
 
@@ -277,20 +307,19 @@ decided separately:
 - **Data → demo seeding only** — a small set of scraped or client-mock products;
   **no full-catalog migration** (§5.1).
 - **CMS → Sanity free tier** for now; self-hosted OSS alternatives deferred (§5.3).
-- **Packaging → dual-target** the Agent Harnesses standard *and* the Claude Code
-  plugin (§5.5, §11). Low effort — our structure already aligns.
+- **Design system → adopt Object Edge "The Missing Layer"** as the foundation; build
+  the commerce components on top of it (§5.2).
+- **Default stacks → Next.js (frontend) / Node.js (backend)**, with overrides.
+- **Workflow orchestration → Claude-native** (no external agent framework) (§5.5).
+- **Packaging → split into per-capability plugins in one marketplace** (e.g.
+  `cma-core`, `cma-storefront`, `cma-seed`, `cma-cms`, and per-platform `cma-atg` …),
+  each also expressed as a **dual-target Agent Harness** (§5.5, §11).
 
 ### Still open
 
-1. **Companion models** — formalize a schema'd "Content Model" and "Storefront
-   blueprint", or keep them as lighter config?
-2. **Workflow orchestration** — stay Claude-native vs adopt LangGraph / MS Agent
-   Framework? (Recommend Claude-native; batch as plain Python jobs.)
-3. **Default stacks** — confirm Next.js / Node.js and define the override mechanism.
-4. **Design system** — build fresh, or adopt/extend an existing component library +
-   Storybook?
-5. **Relationship to V1** — one evolving plugin, or split into `cma-storefront`,
-   `cma-cms`, … in the same marketplace?
+1. **Companion models** — make the Content Model + Storefront Blueprint **formal
+   schema'd artifacts** (like `ccm.json`) or **lighter config**? Recommendation:
+   Content Model formal-ish, Storefront Blueprint light to start (§4).
 
 ---
 
@@ -425,3 +454,10 @@ and the V2 storefront/CMS skills (§10 scaling).
 
 > Not applied yet — this is the V2 target layout. Introducing it is a V2.0 task and
 > would be additive over the current (V1) tree.
+
+**With split packaging (§7):** the sketch above shows one unit. In V2 the framework
+is several plugins in one marketplace — e.g. `cma-core` (the V1 pipeline:
+init/analyze/plan/emit/report), `cma-storefront`, `cma-seed`, `cma-cms`, and
+per-platform `cma-atg` / `cma-occ` … — and **each** carries its own `HARNESS.md` +
+`.claude-plugin/` (dual-target). A top-level `marketplace.json` lists them all; the
+current single-plugin V1 repo becomes `cma-core`.
