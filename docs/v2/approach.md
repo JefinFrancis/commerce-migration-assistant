@@ -224,8 +224,8 @@ commerce component library is the V2.0 build on top of it.
 - **Secondary use:** capture look-and-feel cues for quick mock/demo components.
 - **Tech:** JS-rendered sites need a headless browser — **Playwright is already
   available** in the Claude Code environment.
-- **Action item:** confirm the status of Sivaram's existing scraping component and
-  whether V2 consumes it or builds fresh.
+- **Decision:** build a **new scraping mechanism** for V2 (not dependent on any
+  prior/existing component). Playwright-based, small-sample, best-effort.
 - Since we only need a **small sample** (not the whole catalog), scraping brittleness
   is far less risky than in a full-migration scenario — keep it best-effort with mock
   products as the always-available fallback.
@@ -354,13 +354,14 @@ per phase (V2.0 → V2.2, §8)._
 
 ## 9. Action items (from the calls)
 
-- **Jefin** — check with **Sivaram** on the scraping component status.
 - **Jefin** — "AI Harness" identified as the **Agent Harnesses standard** (§5.5);
   next step is to prototype the dual-target harness layout (§11) and run
   `ahar validate`.
-- **Jefin** — request a second laptop to isolate dev environments.
+- **Jefin** — design a **new scraping mechanism** for demo seeding (§5.4).
 - **Jefin** — secure/document the meeting transcripts.
-- **Adriano** — consult Jacks/Kiran on additional resourcing (Cspire bandwidth).
+
+> Dropped from the original call notes (no longer pursued): a dedicated additional
+> engineer, reusing a prior scraping component, and a separate dev machine.
 
 ---
 
