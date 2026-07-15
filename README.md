@@ -80,11 +80,18 @@ review mappings, edit the model, and add custom CT-side attributes.
   ATG strategy, telecom pack, Terraform emission, packaging, CT version strategy).
 - **[Usage guide](docs/usage.md)** — step-by-step walkthrough of a migration.
 - **[Extending](docs/extending.md)** — adding a new source platform or domain pack.
+- **[V2 direction](docs/v2/approach.md)** — *planned, not yet implemented.* Expands
+  the scope to a full demo-ready storefront accelerator (storefront, backend, demo
+  seeding, CMS). Includes a [stakeholder deck](docs/v2/stakeholder-deck.html).
 
 ## Status
 
 The architecture is defined; implementation follows the [roadmap](docs/architecture.md#11-roadmap).
 Current first slice: **ATG → commercetools**, **telecom** domain, **B2B + B2C**.
+
+Everything shipped today is **schema-only** (this README's scope). A future **V2**
+extends the framework to storefront/backend/CMS generation and demo seeding — see
+the [V2 direction](docs/v2/approach.md); none of it is built yet.
 
 ## License
 

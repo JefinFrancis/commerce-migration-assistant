@@ -513,6 +513,11 @@ only what changed — nothing must fit in one context or one session.
 5. Wire in the telecom domain pack.
 6. Add a second source platform (OCC or Shopify) to validate hub-and-spoke reuse.
 
+> **Beyond V1:** a separate **V2 direction** ([`docs/v2/approach.md`](v2/approach.md))
+> expands the framework from this schema-only pipeline into a full demo-ready
+> storefront accelerator (storefront, backend, demo seeding, CMS). It is planned, not
+> yet implemented — this document describes the built V1 system.
+
 ---
 
 ## Appendix: verified `labd/commercetools` resources
