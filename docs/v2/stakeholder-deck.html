@@ -1,0 +1,309 @@
+<title>Commerce Migration Assistant — V2</title>
+
+<style>
+  /* ── Object Edge — "The Missing Layer" tokens (from the shared design system) ── */
+  :root{
+    --paper:#F4EFE6; --paper-2:#EAE3D5; --ink:#0A0B0D; --ink-2:#1A1D21; --teal:#0E3B3C;
+    --amber:#C97A2A; --amber-ink:#7A4412;
+    --fg-1:#0A0B0D; --fg-2:rgba(10,11,13,0.56); --fg-3:rgba(10,11,13,0.40);
+    --rule:rgba(10,11,13,0.14); --rule-strong:rgba(10,11,13,0.28);
+    --on-dark:#E9E2D2; --muted-dark:rgba(233,226,210,0.60); --faint-dark:rgba(233,226,210,0.40);
+    --rule-dark:rgba(233,226,210,0.20);
+    --sans:'Inter Tight',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-snap-type:y proximity; scroll-behavior:smooth}
+  body{margin:0; background:var(--ink); font-family:var(--sans); color:var(--fg-1);
+    -webkit-font-smoothing:antialiased;}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{animation:none!important;transition:none!important} }
+
+  /* ── slide shell ── */
+  .slide{min-height:100vh; scroll-snap-align:start; display:flex; align-items:center;
+    padding:clamp(48px,7vw,104px) clamp(28px,7vw,120px); position:relative; overflow:hidden;}
+  .wrap{width:100%; max-width:1120px; margin:0 auto}
+  .ground-paper{background:var(--paper); color:var(--fg-1)}
+  .ground-ink{background:var(--ink); color:var(--on-dark)}
+  .ground-teal{background:var(--teal); color:var(--on-dark)}
+
+  /* ── type (Object Edge scale, viewport-adapted) ── */
+  .eyebrow{font-family:var(--mono); font-weight:500; text-transform:uppercase;
+    letter-spacing:0.14em; font-size:clamp(11px,1.05vw,14px); color:var(--fg-2);
+    display:flex; align-items:center; gap:.9em; margin:0 0 1.6rem}
+  .ground-ink .eyebrow,.ground-teal .eyebrow{color:var(--muted-dark)}
+  .eyebrow .sq{width:13px;height:13px;background:var(--amber);flex:none}
+  .display{font-family:var(--sans); font-weight:500; letter-spacing:-0.04em; line-height:0.98;
+    font-size:clamp(2.9rem,8.5vw,6.6rem); margin:0; text-wrap:balance}
+  .title{font-family:var(--sans); font-weight:500; letter-spacing:-0.032em; line-height:1.02;
+    font-size:clamp(2.1rem,5vw,3.9rem); margin:0 0 1.5rem; text-wrap:balance}
+  .pull{font-family:var(--sans); font-weight:400; letter-spacing:-0.03em; line-height:1.06;
+    font-size:clamp(2rem,5.2vw,4rem); margin:0; text-wrap:balance}
+  .lede{font-family:var(--sans); font-weight:400; letter-spacing:-0.012em; line-height:1.3;
+    font-size:clamp(1.1rem,2vw,1.6rem); color:var(--fg-2); max-width:34ch; margin:1.5rem 0 0}
+  .ground-ink .lede,.ground-teal .lede{color:var(--muted-dark)}
+  .body{font-size:clamp(1rem,1.4vw,1.2rem); line-height:1.35; letter-spacing:-0.005em}
+  .foot{font-family:var(--mono); font-size:clamp(11px,1vw,13px); letter-spacing:0.08em;
+    color:var(--fg-3); margin-top:2.6rem}
+  .ground-ink .foot,.ground-teal .foot{color:var(--faint-dark)}
+  .num{font-family:var(--mono); color:var(--amber); letter-spacing:0.06em; font-feature-settings:"tnum" 1}
+  b,strong{font-weight:600}
+  .amber-t{color:var(--amber)}
+
+  /* ── numbered stack (Object Edge component) ── */
+  .stack{margin:2rem 0 0; border-top:1px solid var(--rule)}
+  .ground-ink .stack,.ground-teal .stack{border-color:var(--rule-dark)}
+  .row{display:grid; grid-template-columns:2.4rem 1fr; gap:clamp(1rem,3vw,2.4rem);
+    padding:clamp(.85rem,1.6vw,1.35rem) 0; border-bottom:1px solid var(--rule); align-items:baseline}
+  .ground-ink .row,.ground-teal .row{border-color:var(--rule-dark)}
+  .row .k{font-family:var(--mono); color:var(--amber); font-size:clamp(.8rem,1.1vw,.95rem); letter-spacing:.06em}
+  .row .h{font-family:var(--sans); font-weight:500; letter-spacing:-.01em; font-size:clamp(1.05rem,1.7vw,1.4rem)}
+  .row .d{color:var(--fg-2); font-size:clamp(.9rem,1.2vw,1.05rem); margin-top:.25rem; line-height:1.35}
+  .ground-ink .row .d,.ground-teal .row .d{color:var(--muted-dark)}
+
+  /* ── two-column contrast (hairline divided, no boxes) ── */
+  .cols{display:grid; grid-template-columns:1fr 1fr; gap:0; margin-top:2rem}
+  .cols > div{padding:0 clamp(1.2rem,3vw,2.4rem)}
+  .cols > div:first-child{padding-left:0; border-right:1px solid var(--rule)}
+  .ground-ink .cols>div:first-child,.ground-teal .cols>div:first-child{border-color:var(--rule-dark)}
+  .colhead{font-family:var(--mono); text-transform:uppercase; letter-spacing:.12em;
+    font-size:clamp(11px,1vw,13px); color:var(--fg-2); margin:0 0 1rem}
+  .ground-ink .colhead,.ground-teal .colhead{color:var(--muted-dark)}
+  .cols li{list-style:none; padding:.55rem 0; border-bottom:1px solid var(--rule); font-size:clamp(.95rem,1.3vw,1.1rem)}
+  .cols ul{margin:0;padding:0} .cols li:last-child{border-bottom:0}
+
+  /* ── stat row ── */
+  .stats{display:flex; flex-wrap:wrap; gap:clamp(1.4rem,4vw,3.2rem); margin-top:2.2rem}
+  .stat .v{font-family:var(--mono); font-weight:500; font-size:clamp(1.8rem,3.6vw,2.8rem);
+    letter-spacing:-.02em; color:var(--amber)}
+  .stat .l{font-size:clamp(.82rem,1.1vw,.98rem); color:var(--fg-2); margin-top:.3rem; max-width:22ch}
+  .ground-ink .stat .l,.ground-teal .stat .l{color:var(--muted-dark)}
+
+  /* ── flow (phases) ── */
+  .flow{display:flex; flex-wrap:wrap; gap:.5rem; margin-top:2rem; align-items:stretch}
+  .step{flex:1 1 140px; border-top:2px solid var(--amber); padding:.9rem 0 0}
+  .step .n{font-family:var(--mono); font-size:.72rem; color:var(--fg-3); letter-spacing:.1em}
+  .step .t{font-family:var(--sans); font-weight:500; font-size:clamp(1rem,1.5vw,1.2rem); margin:.3rem 0 .2rem; letter-spacing:-.01em}
+  .step .s{font-size:.86rem; color:var(--fg-2); line-height:1.3}
+
+  /* ── palette swatches ── */
+  .swatches{display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem}
+  .sw{width:clamp(84px,13vw,140px)}
+  .sw .chip{height:clamp(64px,9vw,92px); border:1px solid var(--rule)}
+  .sw .nm{font-family:var(--mono); font-size:.72rem; letter-spacing:.06em; margin-top:.5rem; color:var(--fg-2)}
+
+  /* ── fixed chrome ── */
+  .nav{position:fixed; right:20px; top:50%; transform:translateY(-50%); z-index:50; display:flex; flex-direction:column; gap:.65rem}
+  .nav button{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--amber);background:transparent;padding:0;cursor:pointer;transition:.2s}
+  .nav button[aria-current="true"]{background:var(--amber); transform:scale(1.3)}
+  .nav button:focus-visible{outline:2px solid var(--amber); outline-offset:3px}
+  .counter{position:fixed; left:22px; bottom:20px; z-index:50; font-family:var(--mono); font-size:12px; letter-spacing:.08em; color:var(--amber)}
+  .counter .tot{color:var(--fg-3)}
+  .wm{position:fixed; left:22px; top:20px; z-index:50; font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--fg-3); display:flex; align-items:center; gap:.6em}
+  .wm .sq{width:12px;height:12px;background:var(--amber)}
+
+  /* reveal */
+  .rv{opacity:0; transform:translateY(14px); transition:opacity .6s ease, transform .6s ease}
+  .in .rv{opacity:1; transform:none}
+  .in .rv:nth-child(2){transition-delay:.05s} .in .rv:nth-child(3){transition-delay:.1s}
+  .in .rv:nth-child(4){transition-delay:.15s} .in .rv:nth-child(5){transition-delay:.2s}
+
+  @media (max-width:760px){
+    .cols,.stack .row{grid-template-columns:1fr}
+    .cols{grid-template-columns:1fr}
+    .cols>div:first-child{border-right:0;border-bottom:1px solid var(--rule);padding:0 0 1.2rem;margin-bottom:1.2rem}
+    .cols>div{padding:0}
+    .nav{display:none}
+    .row{grid-template-columns:2.4rem 1fr}
+  }
+</style>
+
+<div class="wm"><span class="sq"></span> Object Edge</div>
+<nav class="nav" aria-label="Slides"></nav>
+<div class="counter"><span id="cnum">01</span> <span class="tot">/ <span id="ctot">12</span></span></div>
+
+<!-- 1 · COVER -->
+<section class="slide ground-ink" data-title="Cover">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> Commerce Migration Assistant · V2 · Stakeholder Briefing</p>
+    <h1 class="display rv">From schema<br>to storefront.</h1>
+    <p class="lede rv">An AI framework that migrates any commerce platform to commercetools — now evolving from a schema generator into a full, demo-ready storefront accelerator.</p>
+    <p class="foot rv">Object Edge · 2026</p>
+  </div>
+</section>
+
+<!-- 2 · V1 RECAP -->
+<section class="slide ground-paper" data-title="What we've proven">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> Where we are — V1, built &amp; working</p>
+    <h2 class="title rv">The engine already runs.</h2>
+    <p class="body rv" style="max-width:60ch; color:var(--fg-2)">V1 takes a client on any legacy platform and produces a reproducible commercetools project — driven end-to-end by AI agents, with a human in the loop.</p>
+    <div class="stats rv">
+      <div class="stat"><div class="v">ATG → CT</div><div class="l">first platform proven end-to-end</div></div>
+      <div class="stat"><div class="v">3 steps</div><div class="l">analyze → plan → emit Terraform</div></div>
+      <div class="stat"><div class="v">37</div><div class="l">automated tests, all green</div></div>
+      <div class="stat"><div class="v">1 model</div><div class="l">canonical model reused across platforms</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · THE SHIFT (interlude) -->
+<section class="slide ground-teal" data-title="The shift">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> Why V2</p>
+    <p class="pull rv">V1 hands over a schema.<br>Clients want to <span class="amber-t">see their store</span>.</p>
+    <p class="lede rv" style="max-width:44ch">So V2 carries the same automated pipeline all the way to a branded, running demo storefront.</p>
+  </div>
+</section>
+
+<!-- 4 · WHAT V2 ADDS -->
+<section class="slide ground-paper" data-title="What V2 adds">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> What V2 adds</p>
+    <h2 class="title rv">Five new capabilities on top of the engine.</h2>
+    <div class="stack rv">
+      <div class="row"><div class="k">01</div><div><div class="h">Storefront</div><div class="d">A themed reference storefront — Next.js — generated from a shared design system.</div></div></div>
+      <div class="row"><div class="k">02</div><div><div class="h">Backend</div><div class="d">A Node.js service layer wiring the storefront to commercetools and content.</div></div></div>
+      <div class="row"><div class="k">03</div><div><div class="h">Demo seeding</div><div class="d">A handful of real (scraped) or client-supplied mock products — enough to demo.</div></div></div>
+      <div class="row"><div class="k">04</div><div><div class="h">CMS</div><div class="d">Sanity for dynamic content, so pages aren't hard-coded.</div></div></div>
+      <div class="row"><div class="k">05</div><div><div class="h">Design system</div><div class="d">Our own Object Edge system + Storybook — themed per client, not rebuilt.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · THE FLOW -->
+<section class="slide ground-paper" data-title="The flow">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> One automated flow, six phases</p>
+    <h2 class="title rv">Client input in. Running demo out.</h2>
+    <div class="flow rv">
+      <div class="step"><div class="n">01</div><div class="t">Initialize</div><div class="s">Capture client context</div></div>
+      <div class="step"><div class="n">02</div><div class="t">Analyze</div><div class="s">Source → canonical model</div></div>
+      <div class="step"><div class="n">03</div><div class="t">Plan &amp; emit</div><div class="s">commercetools schema</div></div>
+      <div class="step"><div class="n">04</div><div class="t">Storefront</div><div class="s">Themed Next.js app</div></div>
+      <div class="step"><div class="n">05</div><div class="t">Seed demo</div><div class="s">A few products</div></div>
+      <div class="step"><div class="n">06</div><div class="t">CMS</div><div class="s">Dynamic content</div></div>
+    </div>
+    <p class="foot rv">Human review — reports + plain-language prompting — between every phase.</p>
+  </div>
+</section>
+
+<!-- 6 · SCOPE GUARD -->
+<section class="slide ground-paper" data-title="Scope">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> A deliberate boundary</p>
+    <h2 class="title rv">A demo quickstart — not a data migration.</h2>
+    <div class="cols rv">
+      <div>
+        <p class="colhead">In scope</p>
+        <ul>
+          <li>commercetools schema</li>
+          <li>Branded, running storefront</li>
+          <li>A small set of real or mock products</li>
+          <li>Dynamic content via CMS</li>
+        </ul>
+      </div>
+      <div>
+        <p class="colhead">Out of scope — by design</p>
+        <ul>
+          <li>Full production catalog migration</li>
+          <li>Bulk data loads &amp; rate-limit engineering</li>
+          <li>Long-running migration jobs</li>
+          <li style="color:var(--fg-3)">(a separate effort if a client needs it)</li>
+        </ul>
+      </div>
+    </div>
+    <p class="foot rv">Keeping data small removes the hardest, riskiest work from the critical path.</p>
+  </div>
+</section>
+
+<!-- 7 · DESIGN SYSTEM -->
+<section class="slide ground-paper" data-title="Design system">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> Built on our own brand</p>
+    <h2 class="title rv">The Object Edge design system is the foundation.</h2>
+    <p class="body rv" style="max-width:56ch; color:var(--fg-2)">Tokens, typography and components — themed per client, assembled in Storybook. Not random generation, not scraped UI. <b>This very deck is rendered in it.</b></p>
+    <div class="swatches rv">
+      <div class="sw"><div class="chip" style="background:var(--paper-2)"></div><div class="nm">PAPER</div></div>
+      <div class="sw"><div class="chip" style="background:var(--ink)"></div><div class="nm">INK</div></div>
+      <div class="sw"><div class="chip" style="background:var(--teal)"></div><div class="nm">TEAL</div></div>
+      <div class="sw"><div class="chip" style="background:var(--amber)"></div><div class="nm">AMBER</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 · ARCHITECTURE -->
+<section class="slide ground-paper" data-title="How it holds together">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> How it holds together</p>
+    <h2 class="title rv">One model at the center. Portable by design.</h2>
+    <div class="stack rv">
+      <div class="row"><div class="k">◆</div><div><div class="h">Canonical model hub</div><div class="d">Every platform maps to one model; add a platform = one adapter, not a rewrite.</div></div></div>
+      <div class="row"><div class="k">◆</div><div><div class="h">AI-agent native</div><div class="d">Runs on Claude — skills and review built in; no heavy external framework to operate.</div></div></div>
+      <div class="row"><div class="k">◆</div><div><div class="h">Installable &amp; portable</div><div class="d">Shipped as modular plugins on an open agent-harness standard — usable by any team, not locked to one vendor.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 · ROLLOUT -->
+<section class="slide ground-paper" data-title="Rollout">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> Phased rollout</p>
+    <h2 class="title rv">Value at each step.</h2>
+    <div class="stack rv">
+      <div class="row"><div class="k">V2.0</div><div><div class="h">Storefront accelerator</div><div class="d">Design system + Storybook + reference Next.js/Node app wired to commercetools. The reusable asset.</div></div></div>
+      <div class="row"><div class="k">V2.1</div><div><div class="h">Demo quickstart</div><div class="d">Seed the themed app with scraped or mock products — an instant, branded client demo.</div></div></div>
+      <div class="row"><div class="k">V2.2</div><div><div class="h">CMS integration</div><div class="d">Sanity for dynamic content — pages editors can change without code.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 · VALUE -->
+<section class="slide ground-paper" data-title="Why it matters">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> Why it matters</p>
+    <h2 class="title rv">Faster pitches. Consistent quality. Reusable.</h2>
+    <div class="stack rv">
+      <div class="row"><div class="k">01</div><div><div class="h">A branded demo in days, not weeks</div><div class="d">Show a client their own store, running, early in the sales cycle.</div></div></div>
+      <div class="row"><div class="k">02</div><div><div class="h">Consistent across every engagement</div><div class="d">The same design system and pipeline — quality doesn't depend on who's staffed.</div></div></div>
+      <div class="row"><div class="k">03</div><div><div class="h">Reused across clients &amp; verticals</div><div class="d">Build once; re-theme and re-seed per client and domain (Telco first).</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 · CLOSING -->
+<section class="slide ground-ink" data-title="Close">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="sq"></span> The vision</p>
+    <h2 class="display rv" style="font-size:clamp(2.4rem,6.5vw,5rem)">Any platform in.<br>A running store out.</h2>
+    <p class="lede rv">V1 proved the engine. V2 turns it into the fastest way to show a client their future storefront.</p>
+    <p class="foot rv">Object Edge · Commerce Migration Assistant · V2</p>
+  </div>
+</section>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var nav=document.querySelector('.nav'), cnum=document.getElementById('cnum');
+  document.getElementById('ctot').textContent=String(slides.length).padStart(2,'0');
+  slides.forEach(function(s,i){
+    var b=document.createElement('button'); b.setAttribute('aria-label',s.dataset.title||('Slide '+(i+1)));
+    b.addEventListener('click',function(){ s.scrollIntoView({behavior:'smooth'}); }); nav.appendChild(b);
+  });
+  var dots=[].slice.call(nav.children);
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      var i=slides.indexOf(e.target);
+      if(e.isIntersecting){ e.target.classList.add('in');
+        if(e.intersectionRatio>0.55){ dots.forEach(function(d){d.removeAttribute('aria-current')});
+          if(dots[i])dots[i].setAttribute('aria-current','true'); cnum.textContent=String(i+1).padStart(2,'0'); } }
+    });
+  },{threshold:[0.2,0.55,0.8]});
+  slides.forEach(function(s){io.observe(s)});
+  document.addEventListener('keydown',function(ev){
+    if(['ArrowDown','ArrowUp','PageDown','PageUp'].indexOf(ev.key)<0)return;
+    var cur=0,best=1e9; slides.forEach(function(s,i){var d=Math.abs(s.getBoundingClientRect().top); if(d<best){best=d;cur=i;}});
+    var nx=(ev.key==='ArrowDown'||ev.key==='PageDown')?cur+1:cur-1;
+    if(nx>=0&&nx<slides.length){ev.preventDefault(); slides[nx].scrollIntoView({behavior:'smooth'});}
+  });
+})();
+</script>

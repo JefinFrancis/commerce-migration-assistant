@@ -367,6 +367,9 @@ per phase (V2.0 → V2.2, §8)._
 
 ## 10. References
 
+- Stakeholder deck (this direction, rendered in the Object Edge design system):
+  [`docs/v2/stakeholder-deck.html`](stakeholder-deck.html) — open in a browser.
+
 - commercetools — product modeling best practices:
   https://docs.commercetools.com/learning-model-your-product-catalog/product-modeling/best-practices
 - commercetools — categorization best practices:
